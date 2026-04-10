@@ -103,6 +103,33 @@
                     </excludes>
                 </configuration>
             </plugin>
+
+            <!--
+                Surefire configuration for Testcontainers + Podman on Windows.
+                Testcontainers requires a Docker-compatible socket. On Windows with Podman,
+                the machine exposes a named pipe at npipe:////./pipe/docker_engine.
+                TESTCONTAINERS_RYUK_DISABLED=true: Ryuk (resource reaper) requires a Docker
+                socket that Podman's Windows named pipe does not fully support.
+                DOCKER_HOST: Points Testcontainers to the Podman named pipe.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!--
+                        Include *IT.java integration tests alongside *Test.java unit tests.
+                        Surefire defaults do not include *IT.java — must be explicit.
+                    -->
+                    <includes>
+                        <include>**/*Test.java</include>
+                        <include>**/*IT.java</include>
+                    </includes>
+                    <environmentVariables>
+                        <DOCKER_HOST>npipe:////./pipe/docker_engine</DOCKER_HOST>
+                        <TESTCONTAINERS_RYUK_DISABLED>true</TESTCONTAINERS_RYUK_DISABLED>
+                    </environmentVariables>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>
