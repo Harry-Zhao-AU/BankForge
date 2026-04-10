@@ -1,0 +1,28 @@
+# Maven build output
+target/
+*/target/
+
+# IDE files
+.idea/
+*.iml
+*.ipr
+*.iws
+.project
+.classpath
+.settings/
+
+# Spring Boot packaging
+*.jar
+*.war
+*.ear
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Podman / Docker
+.podman/
+
+# Logs
+*.log
+logs/

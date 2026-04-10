@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: notification-service
+  threads:
+    virtual:
+      enabled: true
+
+server:
+  port: 8080
