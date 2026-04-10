@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c \"print\\(open\\('.planning/research/SUMMARY.md', encoding='utf-8'\\).read\\(\\)[-500:]\\)\")",
+      "Bash(python -c \"open\\('.planning/research/final.py','w'\\).write\\('pass'\\)\")",
+      "Bash(python -c ':*)",
+      "Bash(python -c \"open\\('.planning/research/t.py','w'\\).write\\('x=1\\\\nprint\\(x\\)'\\)\")",
+      "Bash(python .planning/research/t.py)",
+      "Bash(git init:*)",
+      "WebSearch",
+      "Skill(gsd-plan-phase)",
+      "Skill(gsd-insert-phase)",
+      "WebFetch(domain:spring.io)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:eosl.date)",
+      "WebFetch(domain:debezium.io)",
+      "Skill(gsd-execute-phase)",
+      "Skill(gsd-resume-work)"
+    ]
+  }
+}
