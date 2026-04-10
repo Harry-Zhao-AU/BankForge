@@ -8,7 +8,7 @@
 
 ## Phases
 
-- [ ] **Phase 1: Service Scaffold + Core Banking** — Four Spring Boot services on Podman Compose with ACID money movement, BSB validation, transfer state machine (enum FSM), and Redis idempotency. Outbox table written but CDC not yet consumed.
+- [x] **Phase 1: Service Scaffold + Core Banking** — Four Spring Boot services on Podman Compose with ACID money movement, BSB validation, transfer state machine (enum FSM), and Redis idempotency. Outbox table written but CDC not yet consumed. (completed 2026-04-10)
 - [ ] **Phase 1.1: CDC Pipeline + Compliance + Kind Spike** — Kafka KRaft + Debezium CDC consuming the outbox, DLT topics, AUSTRAC threshold audit logging, and a Podman + kind networking validation spike.
 - [ ] **Phase 2: Observability** — Full observability stack (OTel Collector, Jaeger, Prometheus, Loki, Grafana) added to Compose, proving distributed traces and metrics before Kubernetes migration.
 - [ ] **Phase 3: Service Mesh & Auth** — Full cut-over to a kind Kubernetes cluster with Istio mTLS STRICT, Kong API gateway, and Keycloak JWT issuance. Kiali live traffic graph operational.
@@ -39,13 +39,13 @@
   3. Submitting a duplicate transfer request with the same idempotency key returns the original cached response without executing a second debit — confirming Redis idempotency is active
   4. payment-service state machine transitions through PENDING -> PAYMENT_PROCESSING -> PAYMENT_DONE -> POSTING -> CONFIRMED for a successful transfer, and to COMPENSATING -> CANCELLED on a failed debit
 
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 - [x] 01-01-PLAN.md — Project foundation: Maven multi-module scaffold, common module (state machine, BSB validation), Compose infrastructure
 - [x] 01-02-PLAN.md — account-service: ACID banking core with Flyway migrations, PESSIMISTIC_WRITE transfers, outbox table, integration tests
 - [x] 01-03-PLAN.md — payment-service: Transfer orchestration with state machine, Redis idempotency, RestClient to account-service, tests
-- [ ] 01-04-PLAN.md — Stub services (ledger + notification), Compose build and startup, end-to-end human verification
+- [x] 01-04-PLAN.md — Stub services (ledger + notification), Compose build and startup, end-to-end human verification
 
 ---
 
@@ -170,7 +170,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Service Scaffold + Core Banking | 3/4 | In Progress|  |
+| 1. Service Scaffold + Core Banking | 4/4 | Complete   | 2026-04-10 |
 | 1.1. CDC Pipeline + Compliance | 0/? | Not started | - |
 | 2. Observability | 0/? | Not started | - |
 | 3. Service Mesh & Auth | 0/? | Not started | - |
