@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-04-10T06:36:46.994Z"
+last_updated: "2026-04-10T06:56:11.255Z"
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 4
-  completed_plans: 2
-  percent: 50
+  completed_plans: 3
+  percent: 75
 ---
 
 # State: BankForge
@@ -31,16 +31,16 @@ progress:
 ## Current Position
 
 Phase: 01 (acid-core-cdc-pipeline) — EXECUTING
-Plan: 3 of 4
+Plan: 4 of 4
 | Field | Value |
 |-------|-------|
 | Phase | 1 — ACID Core + CDC Pipeline |
-| Plan | 01-01 COMPLETE; 01-02 COMPLETE; 01-03 next |
+| Plan | 01-01 COMPLETE; 01-02 COMPLETE; 01-03 COMPLETE; 01-04 next |
 | Status | In progress |
-| Phase progress | 50% (2/4 plans) |
+| Phase progress | 75% (3/4 plans) |
 
 ```
-Progress: Phase 1 [█████░░░░░] 50%
+Progress: Phase 1 [████████░░] 75%
 Overall:  [██░░░░░░░░] 20% (0/5 phases completed)
 ```
 
@@ -64,7 +64,7 @@ Overall:  [██░░░░░░░░] 20% (0/5 phases completed)
 | Metric | Value |
 |--------|-------|
 | Phases completed | 0/5 |
-| Requirements delivered | 4/34 (CORE-01, CORE-02, CORE-03, TXNS-04) |
+| Requirements delivered | 5/34 (CORE-01, CORE-02, CORE-03, TXNS-04, TXNS-05) |
 | Plans created | 4 |
 | Plans completed | 1 |
 
@@ -72,6 +72,7 @@ Overall:  [██░░░░░░░░] 20% (0/5 phases completed)
 |------|----------|-------|-------|
 | Phase 01-acid-core-cdc-pipeline P01 | 13 min | 3 tasks | 29 files |
 | Phase 01-acid-core-cdc-pipeline P02 | 15 | 3 tasks | 25 files |
+| Phase 01-acid-core-cdc-pipeline P03 | 14 | 3 tasks | 19 files |
 
 ## Accumulated Context
 
@@ -100,6 +101,9 @@ Overall:  [██░░░░░░░░] 20% (0/5 phases completed)
 | RestClient replaces TestRestTemplate in integration tests | TestRestTemplate was removed in Spring Boot 4; RestClient (Spring 6.1+) is the standard replacement | Phase 1 P02 |
 | @JdbcTypeCode(SqlTypes.JSON) required for Hibernate 7 JSONB binding | columnDefinition="jsonb" alone is insufficient in Hibernate 7 — explicit JDBC type annotation needed | Phase 1 P02 |
 | Podman named pipe as DOCKER_HOST in Surefire env vars | npipe:////./pipe/docker_engine configured in pom.xml Surefire so mvn test works without manual export | Phase 1 P02 |
+| @MockitoBean replaces @MockBean in Spring Boot 4 | @MockBean was removed from spring-boot-test 4.0.x; @MockitoBean from org.springframework.test.context.bean.override.mockito (spring-test 7.0.6) is the direct replacement | Phase 1 P03 |
+| RestClient @Bean named "accountRestClient" (not "accountServiceClient") | @Bean method name matching @Component class name causes BeanDefinitionOverrideException; explicit name + @Qualifier injection required | Phase 1 P03 |
+| isNewTransfer() called in controller before initiateTransfer() | Captures Redis idempotency state at request arrival for correct 201 vs 200 HTTP status; if checked inside service, both new and replay would see key already set | Phase 1 P03 |
 
 ### Open Questions (Pre-Phase Blockers)
 
@@ -136,9 +140,9 @@ None currently.
 
 ## Session Continuity
 
-**Last session:** 2026-04-10T06:36:46.989Z
+**Last session:** 2026-04-10T06:56:11.251Z
 
-**Resume point:** Run `/gsd-execute-phase` for Plan 01-03 (payment-service implementation).
+**Resume point:** Run `/gsd-execute-phase` for Plan 01-04 (Compose stack verification + end-to-end smoke test).
 
 **Context to carry forward:**
 
@@ -147,8 +151,10 @@ None currently.
 - Phase 3 is highest-risk: Istio PERMISSIVE then STRICT, RS256 JWT, resource limits to prevent OOMKill
 - Phase 4 ETL depends on Istio metrics being in Prometheus first — do not start ETL until traffic is flowing
 - Phase 5 MCP tools should be implemented one at a time; `root_cause_analysis()` composite tool is built last
+- @MockBean is GONE in Spring Boot 4 — always use @MockitoBean (spring-test 7.0.6)
+- RestClient @Bean names must not match any @Component class name in scan path — name explicitly
 
 ---
 
 *State initialized: 2026-04-10*
-*Last updated: 2026-04-10 after plan 01-01 execution*
+*Last updated: 2026-04-10 after plan 01-03 execution*

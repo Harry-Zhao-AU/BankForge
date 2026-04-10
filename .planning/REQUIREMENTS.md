@@ -19,7 +19,7 @@
 - [ ] **TXNS-02**: Outbox rows are captured by Debezium CDC and published to Kafka without dual-write (Debezium reads WAL, not the outbox directly)
 - [ ] **TXNS-03**: Downstream services (ledger, notification) consume Kafka events via Saga choreography — no central orchestrator
 - [x] **TXNS-04**: Transfer lifecycle is tracked through state machine transitions: PENDING → PAYMENT_PROCESSING → PAYMENT_DONE → CONFIRMED (or COMPENSATING → CANCELLED)
-- [ ] **TXNS-05**: Payment API accepts idempotency keys stored in Redis (TTL 24h) — duplicate requests return cached response without re-executing transfer
+- [x] **TXNS-05**: Payment API accepts idempotency keys stored in Redis (TTL 24h) — duplicate requests return cached response without re-executing transfer
 
 ### Australian Banking (AUBN)
 
@@ -106,7 +106,7 @@
 | TXNS-02 | Phase 1 | Pending |
 | TXNS-03 | Phase 1 | Pending |
 | TXNS-04 | Phase 1 | Complete |
-| TXNS-05 | Phase 1 | Pending |
+| TXNS-05 | Phase 1 | Complete |
 | AUBN-01 | Phase 1 | Pending |
 | AUBN-02 | Phase 1 | Pending |
 | OBS-01 | Phase 2 | Pending |
