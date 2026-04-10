@@ -39,10 +39,10 @@
   3. Submitting a duplicate transfer request with the same idempotency key returns the original cached response without executing a second debit — confirming Redis idempotency is active
   4. payment-service state machine transitions through PENDING -> PAYMENT_PROCESSING -> PAYMENT_DONE -> POSTING -> CONFIRMED for a successful transfer, and to COMPENSATING -> CANCELLED on a failed debit
 
-**Plans:** 4 plans
+**Plans:** 1/4 plans executed
 
 Plans:
-- [ ] 01-01-PLAN.md — Project foundation: Maven multi-module scaffold, common module (state machine, BSB validation), Compose infrastructure
+- [x] 01-01-PLAN.md — Project foundation: Maven multi-module scaffold, common module (state machine, BSB validation), Compose infrastructure
 - [ ] 01-02-PLAN.md — account-service: ACID banking core with Flyway migrations, PESSIMISTIC_WRITE transfers, outbox table, integration tests
 - [ ] 01-03-PLAN.md — payment-service: Transfer orchestration with state machine, Redis idempotency, RestClient to account-service, tests
 - [ ] 01-04-PLAN.md — Stub services (ledger + notification), Compose build and startup, end-to-end human verification
@@ -170,7 +170,7 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Service Scaffold + Core Banking | 0/4 | Planned | - |
+| 1. Service Scaffold + Core Banking | 1/4 | In Progress|  |
 | 1.1. CDC Pipeline + Compliance | 0/? | Not started | - |
 | 2. Observability | 0/? | Not started | - |
 | 3. Service Mesh & Auth | 0/? | Not started | - |

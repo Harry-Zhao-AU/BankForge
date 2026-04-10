@@ -7,9 +7,9 @@
 
 ### Core Services (CORE)
 
-- [ ] **CORE-01**: System exposes account-service REST API for creating accounts, checking balances, and listing transfer history
-- [ ] **CORE-02**: System executes account-to-account transfers atomically via account-service (debit + credit + outbox write in one PostgreSQL transaction)
-- [ ] **CORE-03**: System exposes payment-service REST API for initiating NPP-style payment flows
+- [x] **CORE-01**: System exposes account-service REST API for creating accounts, checking balances, and listing transfer history
+- [x] **CORE-02**: System executes account-to-account transfers atomically via account-service (debit + credit + outbox write in one PostgreSQL transaction)
+- [x] **CORE-03**: System exposes payment-service REST API for initiating NPP-style payment flows
 - [ ] **CORE-04**: System records every transfer as a double-entry ledger pair via ledger-service (debit entry + credit entry)
 - [ ] **CORE-05**: System delivers async notifications (email/SMS/push simulation) via notification-service consuming Kafka events
 
@@ -18,7 +18,7 @@
 - [ ] **TXNS-01**: Transfer debit, credit, and outbox row are committed in a single local ACID PostgreSQL transaction — no partial states possible
 - [ ] **TXNS-02**: Outbox rows are captured by Debezium CDC and published to Kafka without dual-write (Debezium reads WAL, not the outbox directly)
 - [ ] **TXNS-03**: Downstream services (ledger, notification) consume Kafka events via Saga choreography — no central orchestrator
-- [ ] **TXNS-04**: Transfer lifecycle is tracked through state machine transitions: PENDING → PAYMENT_PROCESSING → PAYMENT_DONE → CONFIRMED (or COMPENSATING → CANCELLED)
+- [x] **TXNS-04**: Transfer lifecycle is tracked through state machine transitions: PENDING → PAYMENT_PROCESSING → PAYMENT_DONE → CONFIRMED (or COMPENSATING → CANCELLED)
 - [ ] **TXNS-05**: Payment API accepts idempotency keys stored in Redis (TTL 24h) — duplicate requests return cached response without re-executing transfer
 
 ### Australian Banking (AUBN)
@@ -97,15 +97,15 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CORE-01 | Phase 1 | Pending |
-| CORE-02 | Phase 1 | Pending |
-| CORE-03 | Phase 1 | Pending |
+| CORE-01 | Phase 1 | Complete |
+| CORE-02 | Phase 1 | Complete |
+| CORE-03 | Phase 1 | Complete |
 | CORE-04 | Phase 1 | Pending |
 | CORE-05 | Phase 1 | Pending |
 | TXNS-01 | Phase 1 | Pending |
 | TXNS-02 | Phase 1 | Pending |
 | TXNS-03 | Phase 1 | Pending |
-| TXNS-04 | Phase 1 | Pending |
+| TXNS-04 | Phase 1 | Complete |
 | TXNS-05 | Phase 1 | Pending |
 | AUBN-01 | Phase 1 | Pending |
 | AUBN-02 | Phase 1 | Pending |
