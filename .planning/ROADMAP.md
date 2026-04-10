@@ -8,7 +8,8 @@
 
 ## Phases
 
-- [ ] **Phase 1: ACID Core + CDC Pipeline** — Four Spring Boot services running on Podman Compose with correct money movement, Outbox/Debezium CDC, Kafka Saga choreography, transfer state machine, Redis idempotency, BSB validation, and AUSTRAC audit logging. Includes a Podman + kind networking validation spike.
+- [ ] **Phase 1: Service Scaffold + Core Banking** — Four Spring Boot services on Podman Compose with ACID money movement, BSB validation, transfer state machine (enum FSM), and Redis idempotency. Outbox table written but CDC not yet consumed.
+- [ ] **Phase 1.1: CDC Pipeline + Compliance + Kind Spike** — Kafka KRaft + Debezium CDC consuming the outbox, DLT topics, AUSTRAC threshold audit logging, and a Podman + kind networking validation spike.
 - [ ] **Phase 2: Observability** — Full observability stack (OTel Collector, Jaeger, Prometheus, Loki, Grafana) added to Compose, proving distributed traces and metrics before Kubernetes migration.
 - [ ] **Phase 3: Service Mesh & Auth** — Full cut-over to a kind Kubernetes cluster with Istio mTLS STRICT, Kong API gateway, and Keycloak JWT issuance. Kiali live traffic graph operational.
 - [ ] **Phase 4: Graph & RCA Foundation** — Neo4j service graph populated via Prometheus/Istio ETL every 30 seconds, with Cypher queries that identify bottleneck services.
@@ -18,33 +19,57 @@
 
 ## Phase Details
 
-### Phase 1: ACID Core + CDC Pipeline
+### Phase 1: Service Scaffold + Core Banking
 
-**Goal**: Users can execute real Australian bank transfers that are atomic, event-driven, and auditable — all running on Podman Compose
+**Goal**: Four Spring Boot services run correctly on Podman Compose — accounts can be created with BSB validation, funds transfer atomically (debit + credit + outbox row in one TX), the transfer state machine transitions through all states, and Redis idempotency blocks duplicate requests. No event streaming yet.
 
 **Depends on**: Nothing (first phase)
 
-**Requirements**: CORE-01, CORE-02, CORE-03, CORE-04, CORE-05, TXNS-01, TXNS-02, TXNS-03, TXNS-04, TXNS-05, AUBN-01, AUBN-02
+**Requirements**: CORE-01, CORE-02, CORE-03, TXNS-01, TXNS-04, TXNS-05
 
 **Critical constraints (must be correct from Day 1):**
-- PostgreSQL containers must start with `wal_level=logical` and `max_replication_slots=5` — Debezium cannot operate without this
-- Kafka must run in KRaft mode (no ZooKeeper)
 - All monetary fields must use `BigDecimal` in Java and `DECIMAL(15,4)` in PostgreSQL — no `double` or `float`
 - Balance queries must use `SELECT FOR UPDATE` (`PESSIMISTIC_WRITE`) to prevent concurrent overdraft
-- Dead letter queues (DLT topics) must be configured from Day 1 — no silent event loss for financial messages
-- Debezium slot leak prevention: `slot.drop.on.stop=true` in connector config
-- Podman + kind networking spike: validate `KIND_EXPERIMENTAL_PROVIDER=podman` single-node cluster and DNS resolution before Phase 3
+- Outbox table must be created via Flyway migration (Phase 1.1 Debezium will read it) — schema is set now, CDC wiring comes in Phase 1.1
+- PostgreSQL `wal_level=logical` must be set in Compose now so Phase 1.1 Debezium needs no DB restart
 
 **Success Criteria** (what must be TRUE):
   1. A POST to account-service creates an account with a valid BSB (NNN-NNN format) and rejects malformed BSBs — confirming validation runs on every account operation
-  2. A transfer between two accounts commits debit + credit + outbox row in a single PostgreSQL transaction, and that transaction appears in Debezium CDC output on the Kafka topic within 5 seconds — confirming ACID atomicity and CDC pipeline correctness
+  2. A transfer between two accounts commits debit + credit + outbox row in a single PostgreSQL transaction — confirming ACID atomicity (outbox row present in DB; CDC not yet wired)
   3. Submitting a duplicate transfer request with the same idempotency key returns the original cached response without executing a second debit — confirming Redis idempotency is active
-  4. A transfer of AUD $10,000 or more produces a structured compliance event with timestamp, both account IDs, amount, and transfer ID in the AUSTRAC audit log — confirming threshold detection works
-  5. A single-node kind cluster starts via `KIND_EXPERIMENTAL_PROVIDER=podman`, a test pod is reachable, and DNS resolves cluster-internal names from a pod — confirming the networking substrate for Phase 3 is viable
+  4. payment-service state machine transitions through PENDING -> PAYMENT_PROCESSING -> PAYMENT_DONE -> POSTING -> CONFIRMED for a successful transfer, and to COMPENSATING -> CANCELLED on a failed debit
 
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Project foundation: Maven multi-module scaffold, common module (state machine, BSB validation), Compose infrastructure
+- [ ] 01-02-PLAN.md — account-service: ACID banking core with Flyway migrations, PESSIMISTIC_WRITE transfers, outbox table, integration tests
+- [ ] 01-03-PLAN.md — payment-service: Transfer orchestration with state machine, Redis idempotency, RestClient to account-service, tests
+- [ ] 01-04-PLAN.md — Stub services (ledger + notification), Compose build and startup, end-to-end human verification
 
 ---
+
+### Phase 1.1: CDC Pipeline + Compliance + Kind Spike (INSERTED)
+
+**Goal**: Events from the Phase 1 outbox table flow reliably from PostgreSQL WAL through Debezium and Kafka to downstream consumers, AUSTRAC audit logging captures threshold transfers, and Podman + kind networking is validated as the substrate for Phase 3.
+
+**Depends on**: Phase 1
+
+**Requirements**: CORE-04, CORE-05, TXNS-02, TXNS-03, AUBN-01, AUBN-02
+
+**Critical constraints:**
+- Kafka must run in KRaft mode (no ZooKeeper) — `KAFKA_PROCESS_ROLES=broker,controller`
+- Dead letter queues (DLT topics) must be configured from Day 1 — no silent event loss for financial events
+- Debezium slot leak prevention: `slot.drop.on.stop=true` in connector config
+- Podman + kind networking spike must pass before Phase 3 begins
+
+**Success Criteria** (what must be TRUE):
+  1. A transfer between two accounts produces a Debezium CDC event on the Kafka topic within 5 seconds of the PostgreSQL TX commit — confirming the full Outbox -> WAL -> Debezium -> Kafka pipeline
+  2. A Kafka consumer (ledger-service or notification-service) receives and processes the CDC event, with failed messages routed to the DLT topic — confirming at-least-once delivery and DLQ are wired
+  3. A transfer of AUD $10,000 or more produces a structured compliance event with timestamp, both account IDs, amount, and transfer ID in the AUSTRAC audit log — confirming threshold detection works
+  4. A single-node kind cluster starts via `KIND_EXPERIMENTAL_PROVIDER=podman`, a test pod is reachable, and DNS resolves cluster-internal names from a pod — confirming the networking substrate for Phase 3 is viable
+
+**Plans**: TBD
 
 ### Phase 2: Observability
 
@@ -145,7 +170,8 @@
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. ACID Core + CDC Pipeline | 0/? | Not started | - |
+| 1. Service Scaffold + Core Banking | 0/4 | Planned | - |
+| 1.1. CDC Pipeline + Compliance | 0/? | Not started | - |
 | 2. Observability | 0/? | Not started | - |
 | 3. Service Mesh & Auth | 0/? | Not started | - |
 | 4. Graph & RCA Foundation | 0/? | Not started | - |
@@ -160,15 +186,15 @@
 | CORE-01 | Phase 1 | Core Services |
 | CORE-02 | Phase 1 | Core Services |
 | CORE-03 | Phase 1 | Core Services |
-| CORE-04 | Phase 1 | Core Services |
-| CORE-05 | Phase 1 | Core Services |
+| CORE-04 | Phase 1.1 | Core Services |
+| CORE-05 | Phase 1.1 | Core Services |
 | TXNS-01 | Phase 1 | Transaction Patterns |
-| TXNS-02 | Phase 1 | Transaction Patterns |
-| TXNS-03 | Phase 1 | Transaction Patterns |
+| TXNS-02 | Phase 1.1 | Transaction Patterns |
+| TXNS-03 | Phase 1.1 | Transaction Patterns |
 | TXNS-04 | Phase 1 | Transaction Patterns |
 | TXNS-05 | Phase 1 | Transaction Patterns |
-| AUBN-01 | Phase 1 | Australian Banking |
-| AUBN-02 | Phase 1 | Australian Banking |
+| AUBN-01 | Phase 1.1 | Australian Banking |
+| AUBN-02 | Phase 1.1 | Australian Banking |
 | OBS-01 | Phase 2 | Observability |
 | OBS-02 | Phase 2 | Observability |
 | OBS-03 | Phase 2 | Observability |
@@ -198,4 +224,4 @@
 ---
 
 *Roadmap created: 2026-04-10*
-*Last updated: 2026-04-10 after initial creation*
+*Last updated: 2026-04-10 after Phase 1 planning*
