@@ -15,7 +15,7 @@
 
 ### Transaction Patterns (TXNS)
 
-- [ ] **TXNS-01**: Transfer debit, credit, and outbox row are committed in a single local ACID PostgreSQL transaction — no partial states possible
+- [x] **TXNS-01**: Transfer debit, credit, and outbox row are committed in a single local ACID PostgreSQL transaction — no partial states possible
 - [ ] **TXNS-02**: Outbox rows are captured by Debezium CDC and published to Kafka without dual-write (Debezium reads WAL, not the outbox directly)
 - [ ] **TXNS-03**: Downstream services (ledger, notification) consume Kafka events via Saga choreography — no central orchestrator
 - [x] **TXNS-04**: Transfer lifecycle is tracked through state machine transitions: PENDING → PAYMENT_PROCESSING → PAYMENT_DONE → CONFIRMED (or COMPENSATING → CANCELLED)
@@ -102,7 +102,7 @@
 | CORE-03 | Phase 1 | Complete |
 | CORE-04 | Phase 1 | Pending |
 | CORE-05 | Phase 1 | Pending |
-| TXNS-01 | Phase 1 | Pending |
+| TXNS-01 | Phase 1 | Complete |
 | TXNS-02 | Phase 1 | Pending |
 | TXNS-03 | Phase 1 | Pending |
 | TXNS-04 | Phase 1 | Complete |

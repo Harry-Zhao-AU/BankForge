@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-04-10T06:16:30.202Z"
+last_updated: "2026-04-10T06:36:46.994Z"
 progress:
   total_phases: 6
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
-  percent: 25
+  completed_plans: 2
+  percent: 50
 ---
 
 # State: BankForge
@@ -31,16 +31,16 @@ progress:
 ## Current Position
 
 Phase: 01 (acid-core-cdc-pipeline) — EXECUTING
-Plan: 2 of 4
+Plan: 3 of 4
 | Field | Value |
 |-------|-------|
 | Phase | 1 — ACID Core + CDC Pipeline |
-| Plan | 01-01 COMPLETE; 01-02 next |
+| Plan | 01-01 COMPLETE; 01-02 COMPLETE; 01-03 next |
 | Status | In progress |
-| Phase progress | 25% (1/4 plans) |
+| Phase progress | 50% (2/4 plans) |
 
 ```
-Progress: Phase 1 [███░░░░░░░] 25%
+Progress: Phase 1 [█████░░░░░] 50%
 Overall:  [██░░░░░░░░] 20% (0/5 phases completed)
 ```
 
@@ -71,6 +71,7 @@ Overall:  [██░░░░░░░░] 20% (0/5 phases completed)
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 01-acid-core-cdc-pipeline P01 | 13 min | 3 tasks | 29 files |
+| Phase 01-acid-core-cdc-pipeline P02 | 15 | 3 tasks | 25 files |
 
 ## Accumulated Context
 
@@ -96,6 +97,9 @@ Overall:  [██░░░░░░░░] 20% (0/5 phases completed)
 | MCP server in Python (not Java) | Lighter footprint; Python MCP SDK is mature; AI tooling ecosystem | Phase 5 |
 | All MCP write tools default dry_run=True | Claude must not corrupt transfer state without explicit override | Phase 5 |
 | All MCP handlers async + httpx.AsyncClient | Synchronous handlers block all tool calls when one backend is slow | Phase 5 |
+| RestClient replaces TestRestTemplate in integration tests | TestRestTemplate was removed in Spring Boot 4; RestClient (Spring 6.1+) is the standard replacement | Phase 1 P02 |
+| @JdbcTypeCode(SqlTypes.JSON) required for Hibernate 7 JSONB binding | columnDefinition="jsonb" alone is insufficient in Hibernate 7 — explicit JDBC type annotation needed | Phase 1 P02 |
+| Podman named pipe as DOCKER_HOST in Surefire env vars | npipe:////./pipe/docker_engine configured in pom.xml Surefire so mvn test works without manual export | Phase 1 P02 |
 
 ### Open Questions (Pre-Phase Blockers)
 
@@ -132,9 +136,9 @@ None currently.
 
 ## Session Continuity
 
-**Last session:** 2026-04-10T06:16:30.197Z
+**Last session:** 2026-04-10T06:36:46.989Z
 
-**Resume point:** Run `/gsd-execute-phase` for Plan 01-02 (account-service implementation).
+**Resume point:** Run `/gsd-execute-phase` for Plan 01-03 (payment-service implementation).
 
 **Context to carry forward:**
 

@@ -43,7 +43,7 @@
 
 Plans:
 - [x] 01-01-PLAN.md — Project foundation: Maven multi-module scaffold, common module (state machine, BSB validation), Compose infrastructure
-- [ ] 01-02-PLAN.md — account-service: ACID banking core with Flyway migrations, PESSIMISTIC_WRITE transfers, outbox table, integration tests
+- [x] 01-02-PLAN.md — account-service: ACID banking core with Flyway migrations, PESSIMISTIC_WRITE transfers, outbox table, integration tests
 - [ ] 01-03-PLAN.md — payment-service: Transfer orchestration with state machine, Redis idempotency, RestClient to account-service, tests
 - [ ] 01-04-PLAN.md — Stub services (ledger + notification), Compose build and startup, end-to-end human verification
 
