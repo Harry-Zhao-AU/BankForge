@@ -6,19 +6,15 @@
 
 ---
 
-## CRITICAL FLAG: Spring Boot 4.0.5 Version Risk
+## ✓ Spring Boot 4.0.x — CONFIRMED GA (verified 2026-04-10)
 
-**The plan specifies `Spring Boot 4.0.5` — this version may not exist or may still be pre-release.**
+Spring Boot 4.0.x released November 2025. Confirmed actively supported (green) as of 2026-04-10 per spring.io lifecycle page:
+- OSS support through 2026-12
+- Enterprise support through 2027-12
 
-As of August 2025 (training cutoff):
-- Spring Boot 3.3.x / 3.4.x were the stable production releases
-- Spring Boot 4.0 was announced targeting Q4 2025 / Q1 2026, requiring Spring Framework 7.0
-- Spring Framework 7.0 was itself in milestone phase as of mid-2025
-- A specific patch version like `4.0.5` suggests months of post-release stabilisation that may not have happened yet
+**Use Spring Boot 4.0.x as planned. No fallback to 3.4.x needed.**
 
-**Action required before starting Phase 1:** Check https://spring.io/projects/spring-boot and confirm 4.0.x is GA and stable. If it is not yet GA, use Spring Boot 3.4.x LTS instead — all the required features (virtual threads, OTel auto-configuration, structured logging) are available there.
-
-**Confidence on this flag: HIGH** — Spring Boot versioning cadence is well-documented; 4.0.5 being stable by April 2026 is plausible but unverified.
+Note: Spring Boot 3.5.x (released May 2025) also exists and has longer enterprise support (until 2032). For this learning project 4.0.x is the right choice — it's what the plan specifies and it's stable.
 
 ---
 
