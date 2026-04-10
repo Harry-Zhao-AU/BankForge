@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-04-10T07:36:55.530Z"
+last_updated: "2026-04-10T09:00:00.000Z"
 progress:
   total_phases: 6
   completed_phases: 1
-  total_plans: 4
+  total_plans: 7
   completed_plans: 4
-  percent: 100
+  percent: 57
 ---
 
 # State: BankForge
@@ -22,9 +22,9 @@ progress:
 
 **Core Value:** A running, end-to-end system where every enterprise pattern (ACID, Saga, Outbox, mTLS, distributed tracing) is implemented and queryable via AI agent — proving the patterns work together, not just in theory.
 
-**Current Focus:** Phase 01 — acid-core-cdc-pipeline
+**Current Focus:** Phase 1.1 — CDC Pipeline + Compliance + Kind Spike
 
-**Total Phases:** 5
+**Total Phases:** 6
 
 ---
 
@@ -51,7 +51,7 @@ Overall:  [██░░░░░░░░] ~17% (1/6 phases completed)
 | Phase | Name | Status | Plans | Completed |
 |-------|------|--------|-------|-----------|
 | 1 | Service Scaffold + Core Banking | COMPLETE | 4/4 | 2026-04-10 |
-| 1.1 | CDC Pipeline + Compliance + Kind Spike | Not started | TBD | - |
+| 1.1 | CDC Pipeline + Compliance + Kind Spike | Ready to execute | 3/3 planned | - |
 | 2 | Observability | Not started | TBD | - |
 | 3 | Service Mesh & Auth | Not started | TBD | - |
 | 4 | Graph & RCA Foundation | Not started | TBD | - |
@@ -65,7 +65,7 @@ Overall:  [██░░░░░░░░] ~17% (1/6 phases completed)
 |--------|-------|
 | Phases completed | 1/6 |
 | Requirements delivered | 6/34 (CORE-01, CORE-02, CORE-03, TXNS-01, TXNS-04, TXNS-05) |
-| Plans created | 4 |
+| Plans created | 7 |
 | Plans completed | 4 |
 
 | Plan | Duration | Tasks | Files |
@@ -141,21 +141,26 @@ None currently.
 
 ## Session Continuity
 
-**Last session:** 2026-04-10T07:36:55.526Z
+**Last session:** 2026-04-10T09:00:00.000Z
 
-**Resume point:** Phase 1 complete. Run `/gsd-execute-phase` to begin Phase 1.1 (CDC Pipeline + Compliance + Kind Spike).
+**Resume point:** Phase 1.1 planned (3 plans, verified). Run `/gsd-execute-phase 1.1` to begin execution.
 
 **Context to carry forward:**
 
-- Phase 1 has 12 requirements (CORE-01..05, TXNS-01..05, AUBN-01..02) — the heaviest phase
-- Phase 1 includes a mandatory Podman + kind networking spike (success criterion 5) — this must pass before Phase 3 begins
+- Phase 1.1 has 3 plans: 01.1-01 (Kafka+Debezium), 01.1-02 (AUSTRAC), 01.1-03 (kind spike)
+- Plans 01 and 03 are Wave 1 (can run in parallel); Plan 02 depends on Plan 01
+- AUBN-01 (BSB validation) is already done — Phase 1.1 only adds regression check, no re-implementation
+- Debezium uses `quay.io/debezium/connect:3.1` (Docker Hub gone since 2.7)
+- Kafka uses `apache/kafka:3.9.2` with native `KAFKA_*` env vars (not bitnami)
+- Connector uses `topic.prefix` (not `database.server.name`); `table.include.list` (not whitelist)
+- `aggregatetype` must be lowercase `"transfer"` (not `"Transfer"`) — EventRouter case-sensitive topic routing
+- kind spike (Plan 03): kind+kubectl must be installed in WSL2; Podman machine is already rootful
 - Phase 3 is highest-risk: Istio PERMISSIVE then STRICT, RS256 JWT, resource limits to prevent OOMKill
 - Phase 4 ETL depends on Istio metrics being in Prometheus first — do not start ETL until traffic is flowing
-- Phase 5 MCP tools should be implemented one at a time; `root_cause_analysis()` composite tool is built last
-- @MockBean is GONE in Spring Boot 4 — always use @MockitoBean (spring-test 7.0.6)
+- @MockBean is GONE in Spring Boot 4 — always use @MockitoBean / @SpyBean
 - RestClient @Bean names must not match any @Component class name in scan path — name explicitly
 
 ---
 
 *State initialized: 2026-04-10*
-*Last updated: 2026-04-10 after plan 01-04 execution — Phase 1 complete*
+*Last updated: 2026-04-10 after Phase 1.1 planning — 3 plans ready to execute*
