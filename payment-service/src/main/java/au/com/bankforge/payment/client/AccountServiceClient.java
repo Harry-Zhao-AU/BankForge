@@ -1,6 +1,6 @@
 package au.com.bankforge.payment.client;
 
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -15,14 +15,18 @@ import java.util.UUID;
  * Uses Spring Framework 7 RestClient (NOT deprecated RestTemplate).
  * Target endpoint: POST /api/internal/transfers
  *
- * The RestClient bean is injected by name "accountServiceClient" from RestClientConfig.
+ * The RestClient bean "accountRestClient" is injected via @Qualifier to avoid
+ * clashing with the AccountServiceClient @Component bean name (BeanDefinitionOverrideException).
  * Base URL is read from services.account.base-url in application.yml.
  */
 @Component
-@RequiredArgsConstructor
 public class AccountServiceClient {
 
-    private final RestClient accountServiceClient;
+    private final RestClient accountRestClient;
+
+    public AccountServiceClient(@Qualifier("accountRestClient") RestClient accountRestClient) {
+        this.accountRestClient = accountRestClient;
+    }
 
     /**
      * Executes an ACID fund transfer in the account-service.
@@ -36,7 +40,7 @@ public class AccountServiceClient {
      */
     public AccountTransferResponse executeTransfer(
             UUID fromAccountId, UUID toAccountId, BigDecimal amount, String description) {
-        return accountServiceClient.post()
+        return accountRestClient.post()
                 .uri("/api/internal/transfers")
                 .body(Map.of(
                         "fromAccountId", fromAccountId,
