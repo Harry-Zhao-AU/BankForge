@@ -4,13 +4,13 @@ import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.bean.SpyBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.KafkaContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.kafka.KafkaContainer;
 import org.testcontainers.utility.DockerImageName;
 
 import java.util.UUID;
@@ -28,7 +28,6 @@ class NotificationEventListenerIT {
     @Container
     static KafkaContainer kafka = new KafkaContainer(
             DockerImageName.parse("apache/kafka:3.9.2")
-                .asCompatibleSubstituteFor("confluentinc/cp-kafka")
     );
 
     @DynamicPropertySource
@@ -40,7 +39,7 @@ class NotificationEventListenerIT {
     @Autowired
     private KafkaTemplate<String, String> kafkaTemplate;
 
-    @SpyBean
+    @MockitoSpyBean
     private NotificationEventListener notificationEventListener;
 
     @Test
