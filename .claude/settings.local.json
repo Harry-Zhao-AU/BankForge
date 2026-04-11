@@ -15,7 +15,21 @@
       "WebFetch(domain:eosl.date)",
       "WebFetch(domain:debezium.io)",
       "Skill(gsd-execute-phase)",
-      "Skill(gsd-resume-work)"
+      "Skill(gsd-resume-work)",
+      "Bash(git -C \"C:/SideProject/BankForge\" worktree list)",
+      "Bash(podman exec:*)",
+      "Bash(MSYS_NO_PATHCONV=1 podman exec:*)",
+      "Bash(\"/c/Program Files/Docker/docker-compose\" build account-service)",
+      "Bash(\"/c/Program Files/Docker/docker-compose\" up -d account-service)",
+      "Bash('/c/Program Files/JetBrains/IntelliJ IDEA Community Edition 2025.2.4/plugins/maven/lib/maven3/bin/mvn' package -pl ledger-service,notification-service -am -DskipTests -q)",
+      "Bash('/c/Program Files/JetBrains/IntelliJ IDEA Community Edition 2025.2.4/plugins/maven/lib/maven3/bin/mvn' package -pl ledger-service -am -DskipTests)",
+      "Bash('/c/Program Files/JetBrains/IntelliJ IDEA Community Edition 2025.2.4/plugins/maven/lib/maven3/bin/mvn' package -pl ledger-service,notification-service -am -Dmaven.test.skip=true -q)",
+      "Bash(\"/c/Program Files/Docker/docker-compose\" build ledger-service notification-service)",
+      "Bash(\"/c/Program Files/Docker/docker-compose\" up -d ledger-service notification-service)",
+      "Bash(podman logs:*)",
+      "Bash('/c/Program Files/JetBrains/IntelliJ IDEA Community Edition 2025.2.4/plugins/maven/lib/maven3/bin/mvn' package -pl ledger-service -am -Dmaven.test.skip=true -q)",
+      "Bash(\"/c/Program Files/Docker/docker-compose\" build ledger-service)",
+      "Bash(\"/c/Program Files/Docker/docker-compose\" up -d ledger-service)"
     ]
   }
 }

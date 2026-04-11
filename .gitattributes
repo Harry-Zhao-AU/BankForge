@@ -1,0 +1,15 @@
+# Force LF line endings for shell scripts regardless of OS
+*.sh text eol=lf
+
+# Force LF for other text files that tools require LF
+*.json text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.xml text eol=lf
+*.properties text eol=lf
+*.conf text eol=lf
+
+# Windows-native files can use CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
