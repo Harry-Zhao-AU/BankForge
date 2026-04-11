@@ -1,0 +1,31 @@
+{
+  "name": "bankforge-outbox-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "tasks.max": "1",
+    "database.hostname": "account-db",
+    "database.port": "5432",
+    "database.user": "account",
+    "database.password": "secret",
+    "database.dbname": "accountdb",
+    "topic.prefix": "bankforge",
+    "plugin.name": "pgoutput",
+    "publication.autocreate.mode": "filtered",
+    "publication.name": "bankforge_outbox_pub",
+    "slot.name": "bankforge_outbox_slot",
+    "slot.drop.on.stop": "true",
+    "table.include.list": "public.outbox_event",
+    "tombstones.on.delete": "false",
+    "transforms": "outbox",
+    "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
+    "transforms.outbox.route.by.field": "aggregatetype",
+    "transforms.outbox.table.field.event.key": "aggregateid",
+    "transforms.outbox.table.field.event.payload": "payload",
+    "transforms.outbox.table.expand.json.payload": "true",
+    "transforms.outbox.route.topic.replacement": "banking.${routedByValue}.events",
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "false",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "false"
+  }
+}

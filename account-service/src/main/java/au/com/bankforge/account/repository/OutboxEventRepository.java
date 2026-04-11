@@ -31,7 +31,7 @@ public interface OutboxEventRepository extends JpaRepository<OutboxEvent, UUID> 
      * Matches on payload->>'fromAccountId' OR payload->>'toAccountId'.
      * Used by GET /api/accounts/{id}/transfers to return transfer history for an account.
      */
-    @Query(value = "SELECT * FROM outbox_event WHERE aggregatetype = 'Transfer' " +
+    @Query(value = "SELECT * FROM outbox_event WHERE aggregatetype = 'transfer' " +
             "AND (payload->>'fromAccountId' = :accountId OR payload->>'toAccountId' = :accountId) " +
             "ORDER BY created_at DESC",
             nativeQuery = true)
