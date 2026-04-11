@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONNECTOR_JSON="$SCRIPT_DIR/../infra/debezium/outbox-connector.json"
+
 CONNECT_URL="${1:-http://localhost:8083}"
 CONNECTOR_NAME="bankforge-outbox-connector"
 
@@ -14,12 +17,12 @@ STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$CONNECT_URL/connectors/$CONNEC
 if [ "$STATUS" == "200" ]; then
   echo "Updating existing connector '$CONNECTOR_NAME'..."
   curl -s -X PUT -H "Content-Type: application/json" \
-    --data "$(jq '.config' infra/debezium/outbox-connector.json)" \
+    --data "$(jq '.config' "$CONNECTOR_JSON")" \
     "$CONNECT_URL/connectors/$CONNECTOR_NAME/config" | jq .
 else
   echo "Creating connector '$CONNECTOR_NAME'..."
   curl -s -X POST -H "Content-Type: application/json" \
-    --data @infra/debezium/outbox-connector.json \
+    --data @"$CONNECTOR_JSON" \
     "$CONNECT_URL/connectors" | jq .
 fi
 
