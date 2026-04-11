@@ -10,7 +10,7 @@ import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.retry.annotation.Backoff;
+import org.springframework.kafka.annotation.BackOff;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.JsonNode;
@@ -29,7 +29,7 @@ public class LedgerEventListener {
 
     @RetryableTopic(
         attempts = "4",
-        backoff = @Backoff(delay = 1000, multiplier = 2.0, maxDelay = 10000),
+        backOff = @BackOff(delay = 1000, multiplier = 2.0, maxDelay = 10000),
         dltTopicSuffix = "-dlt",
         autoCreateTopics = "true",
         numPartitions = "1",
