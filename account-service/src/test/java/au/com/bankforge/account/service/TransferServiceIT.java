@@ -69,7 +69,7 @@ class TransferServiceIT {
 
         // Count outbox rows before transfer
         int outboxBefore = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM outbox_event WHERE aggregatetype = 'Transfer'", Integer.class);
+                "SELECT COUNT(*) FROM outbox_event WHERE aggregatetype = 'transfer'", Integer.class);
 
         // Execute transfer: A -> B, $250
         var transferReq = new TransferRequest(
@@ -100,7 +100,7 @@ class TransferServiceIT {
 
         // Verify exactly 1 new outbox_event row was created
         int outboxAfter = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM outbox_event WHERE aggregatetype = 'Transfer'", Integer.class);
+                "SELECT COUNT(*) FROM outbox_event WHERE aggregatetype = 'transfer'", Integer.class);
         assertThat(outboxAfter).isEqualTo(outboxBefore + 1);
     }
 
@@ -112,7 +112,7 @@ class TransferServiceIT {
 
         // Count outbox rows before (to verify no new row created on failure)
         int outboxBefore = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM outbox_event WHERE aggregatetype = 'Transfer'", Integer.class);
+                "SELECT COUNT(*) FROM outbox_event WHERE aggregatetype = 'transfer'", Integer.class);
 
         // Attempt transfer: C -> D, $500 (more than C's balance)
         var transferReq = new TransferRequest(
@@ -145,7 +145,7 @@ class TransferServiceIT {
 
         // Verify no new outbox_event row was created (transaction rolled back)
         int outboxAfter = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM outbox_event WHERE aggregatetype = 'Transfer'", Integer.class);
+                "SELECT COUNT(*) FROM outbox_event WHERE aggregatetype = 'transfer'", Integer.class);
         assertThat(outboxAfter).isEqualTo(outboxBefore);
     }
 }

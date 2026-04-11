@@ -89,7 +89,7 @@ public class TransferService {
         // Outbox write — SAME transaction as balance changes (T-1-03: immutable audit trail)
         UUID transferId = UUID.randomUUID();
         OutboxEvent outbox = OutboxEvent.builder()
-                .aggregatetype("Transfer")
+                .aggregatetype("transfer")
                 .aggregateid(transferId.toString())
                 .type("TransferInitiated")
                 .payload(serializePayload(transferId, fromId, toId, amount))
