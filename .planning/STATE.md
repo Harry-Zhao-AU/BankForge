@@ -102,6 +102,7 @@ Overall:  [██░░░░░░░░] ~17% (1/6 phases completed)
 | RestClient replaces TestRestTemplate in integration tests | TestRestTemplate was removed in Spring Boot 4; RestClient (Spring 6.1+) is the standard replacement | Phase 1 P02 |
 | @JdbcTypeCode(SqlTypes.JSON) required for Hibernate 7 JSONB binding | columnDefinition="jsonb" alone is insufficient in Hibernate 7 — explicit JDBC type annotation needed | Phase 1 P02 |
 | Podman named pipe as DOCKER_HOST in Surefire env vars | npipe:////./pipe/docker_engine configured in pom.xml Surefire so mvn test works without manual export | Phase 1 P02 |
+| kind + Podman rootful networking spike: PASSED | Validated single-node kind cluster (bankforge-spike), pod deployment, and DNS resolution (kubernetes.default.svc.cluster.local → 10.96.0.1) via KIND_EXPERIMENTAL_PROVIDER=podman. WSL2 workarounds required: kind network with --disable-dns (prevents aardvark-dns failure), root Podman log_driver=k8s-file (required for podman logs / systemd detection). Tool versions: kind v0.27.0, kubectl v1.35.3, Podman v5.8.1. Phase 3 prerequisite: SATISFIED. | Phase 1.1 P03 |
 | @MockitoBean replaces @MockBean in Spring Boot 4 | @MockBean was removed from spring-boot-test 4.0.x; @MockitoBean from org.springframework.test.context.bean.override.mockito (spring-test 7.0.6) is the direct replacement | Phase 1 P03 |
 | RestClient @Bean named "accountRestClient" (not "accountServiceClient") | @Bean method name matching @Component class name causes BeanDefinitionOverrideException; explicit name + @Qualifier injection required | Phase 1 P03 |
 | isNewTransfer() called in controller before initiateTransfer() | Captures Redis idempotency state at request arrival for correct 201 vs 200 HTTP status; if checked inside service, both new and replay would see key already set | Phase 1 P03 |
@@ -111,7 +112,7 @@ Overall:  [██░░░░░░░░] ~17% (1/6 phases completed)
 | Question | Blocks | Priority |
 |----------|--------|----------|
 | Is Spring Boot 4.0.x GA and stable? | Phase 1 start | CRITICAL — verify before writing any code; fall back to 3.4.x if needed |
-| Does Podman rootless work with kind on this machine? | Phase 1 spike, Phase 3 | HIGH — validate in Phase 1 spike; switch to rootful if needed |
+| Does Podman rootless work with kind on this machine? | Phase 1 spike, Phase 3 | RESOLVED — rootful Podman works. WSL2 workarounds: kind network --disable-dns + k8s-file log driver. See Key Decisions table. |
 | Spring State Machine vs hand-rolled enum FSM? | Phase 1 design | RESOLVED — Spring State Machine 4.0.1 targets Spring Framework 6.2 only; incompatible with Spring Boot 4. Using enum FSM in common module. |
 | CDC-only outbox vs polling outbox? | Phase 1 design | MEDIUM — decide once, document; CDC-only recommended |
 | Exact OTel property key names for the Spring Boot version in use | Phase 2 | LOW — verify before wiring OTel Collector |
@@ -127,7 +128,7 @@ Overall:  [██░░░░░░░░] ~17% (1/6 phases completed)
 ### Todos
 
 - [ ] Verify Spring Boot 4.0.x GA status before writing first line of code
-- [ ] Run Podman + kind networking spike in Phase 1 (validate before Phase 3)
+- [x] Run Podman + kind networking spike in Phase 1.1 (validated — PASSED: kind v0.27.0, kubectl v1.35.3, Podman v5.8.1)
 - [ ] Set up `make clean` target that drops Debezium replication slots
 - [ ] Write `port-forward.sh` script in Phase 3 for MCP connectivity from Windows host
 - [ ] Verify Prometheus Istio metric label names before writing ETL (Phase 4)
