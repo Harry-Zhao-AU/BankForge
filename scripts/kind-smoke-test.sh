@@ -61,8 +61,14 @@ echo "Recreating 'kind' network with DNS disabled (prevents aardvark-dns failure
 podman network rm kind 2>/dev/null || true
 podman network create --disable-dns kind
 echo "Configuring k8s-file log driver (required for podman logs to work with systemd)..."
-mkdir -p /root/.config/containers
-printf '[containers]\nlog_driver = "k8s-file"\n' > /root/.config/containers/containers.conf
+CONTAINERS_CONF="/root/.config/containers/containers.conf"
+mkdir -p "$(dirname "$CONTAINERS_CONF")"
+if ! grep -q 'log_driver' "$CONTAINERS_CONF" 2>/dev/null; then
+    printf '[containers]\nlog_driver = "k8s-file"\n' >> "$CONTAINERS_CONF"
+    echo "Appended k8s-file log_driver to $CONTAINERS_CONF"
+else
+    echo "log_driver already configured in $CONTAINERS_CONF — skipping"
+fi
 echo "Workarounds applied."
 echo ""
 
