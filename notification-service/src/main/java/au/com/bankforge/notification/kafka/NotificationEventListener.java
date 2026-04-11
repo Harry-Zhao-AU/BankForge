@@ -43,10 +43,17 @@ public class NotificationEventListener {
         log.info("Notification processing transfer event: topic={} offset={}", topic, offset);
 
         JsonNode root = parsePayload(payload);
-        UUID transferId = UUID.fromString(root.get("transferId").asText());
-        UUID fromAccountId = UUID.fromString(root.get("fromAccountId").asText());
-        UUID toAccountId = UUID.fromString(root.get("toAccountId").asText());
-        BigDecimal amount = new BigDecimal(root.get("amount").asText());
+        JsonNode transferIdNode = root.get("transferId");
+        JsonNode fromAccountIdNode = root.get("fromAccountId");
+        JsonNode toAccountIdNode = root.get("toAccountId");
+        JsonNode amountNode = root.get("amount");
+        if (transferIdNode == null || fromAccountIdNode == null || toAccountIdNode == null || amountNode == null) {
+            throw new IllegalArgumentException("Transfer event missing required field(s). payload=" + payload);
+        }
+        UUID transferId = UUID.fromString(transferIdNode.asText());
+        UUID fromAccountId = UUID.fromString(fromAccountIdNode.asText());
+        UUID toAccountId = UUID.fromString(toAccountIdNode.asText());
+        BigDecimal amount = new BigDecimal(amountNode.asText());
 
         log.info("NOTIFICATION: Transfer {} completed. From={} To={} Amount={}",
                 transferId, fromAccountId, toAccountId, amount);

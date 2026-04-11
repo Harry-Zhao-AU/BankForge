@@ -65,15 +65,25 @@ public class AustracAuditListener {
 
         JsonNode root = parsePayload(payload);
 
-        BigDecimal amount = new BigDecimal(root.get("amount").asText());
+        JsonNode amountNode = root.get("amount");
+        if (amountNode == null) {
+            throw new IllegalArgumentException("Transfer event missing required field: amount. payload=" + payload);
+        }
+        BigDecimal amount = new BigDecimal(amountNode.asText());
 
         // Use compareTo, NOT equals — BigDecimal.equals considers scale:
         // new BigDecimal("10000.00").equals(new BigDecimal("10000.0000")) returns FALSE
         // new BigDecimal("10000.00").compareTo(new BigDecimal("10000.0000")) returns 0
         if (amount.compareTo(THRESHOLD) >= 0) {
-            String transferId = root.get("transferId").asText();
-            String fromAccountId = root.get("fromAccountId").asText();
-            String toAccountId = root.get("toAccountId").asText();
+            JsonNode transferIdNode = root.get("transferId");
+            JsonNode fromAccountIdNode = root.get("fromAccountId");
+            JsonNode toAccountIdNode = root.get("toAccountId");
+            if (transferIdNode == null || fromAccountIdNode == null || toAccountIdNode == null) {
+                throw new IllegalArgumentException("Transfer event missing required field(s) for AUSTRAC audit. payload=" + payload);
+            }
+            String transferId = transferIdNode.asText();
+            String fromAccountId = fromAccountIdNode.asText();
+            String toAccountId = toAccountIdNode.asText();
 
             AUSTRAC_LOG.info("AUSTRAC threshold transfer detected",
                     kv("austrac_event", true),
