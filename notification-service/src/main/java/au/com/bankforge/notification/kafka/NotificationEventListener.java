@@ -4,11 +4,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.annotation.BackOff;
 import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.retry.annotation.Backoff;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -25,7 +25,7 @@ public class NotificationEventListener {
 
     @RetryableTopic(
         attempts = "4",
-        backoff = @Backoff(delay = 1000, multiplier = 2.0, maxDelay = 10000),
+        backOff = @BackOff(delay = 1000, multiplier = 2.0, maxDelay = 10000),
         dltTopicSuffix = "-dlt",
         autoCreateTopics = "true",
         numPartitions = "1",

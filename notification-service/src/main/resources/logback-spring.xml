@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Import Spring Boot default console appender -->
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+
+    <!-- Configurable audit log path — overridable via Spring property log.austrac.path -->
+    <springProperty scope="context" name="austracLogPath"
+                    source="log.austrac.path"
+                    defaultValue="logs/austrac-audit.log"/>
+
+    <!-- AUSTRAC audit log — dedicated file, structured JSON, separate from operational logs -->
+    <appender name="AUSTRAC_FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${austracLogPath}</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${austracLogPath}.%d{yyyy-MM-dd}.%i</fileNamePattern>
+            <maxFileSize>50MB</maxFileSize>
+            <maxHistory>365</maxHistory>
+            <totalSizeCap>5GB</totalSizeCap>
+        </rollingPolicy>
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder"/>
+    </appender>
+
+    <!--
+        AUSTRAC_AUDIT logger: additivity=false ensures audit events go ONLY to the
+        dedicated file, not to the console or root logger. This is a compliance
+        requirement — operational and audit logs must be separable.
+    -->
+    <logger name="AUSTRAC_AUDIT" level="INFO" additivity="false">
+        <appender-ref ref="AUSTRAC_FILE"/>
+    </logger>
+
+    <root level="INFO">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+</configuration>
