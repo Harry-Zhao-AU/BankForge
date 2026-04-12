@@ -165,12 +165,15 @@ services:
     depends_on:
       account-db:
         condition: service_healthy
+      otel-collector:
+        condition: service_healthy
     ports:
       - "8081:8080"
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://account-db:5432/accountdb
       SPRING_DATASOURCE_USERNAME: account
       SPRING_DATASOURCE_PASSWORD: secret
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
 
   payment-service:
     build:
@@ -180,6 +183,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      otel-collector:
+        condition: service_healthy
     ports:
       - "8082:8080"
     environment:
@@ -188,6 +193,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: secret
       SPRING_DATA_REDIS_HOST: redis
       SERVICES_ACCOUNT_BASE_URL: http://account-service:8080
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
 
   ledger-service:
     build:
@@ -197,6 +203,8 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      otel-collector:
+        condition: service_healthy
     ports:
       - "8083:8080"
     environment:
@@ -204,6 +212,7 @@ services:
       SPRING_DATASOURCE_USERNAME: ledger
       SPRING_DATASOURCE_PASSWORD: secret
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
 
   notification-service:
     build:
@@ -211,7 +220,102 @@ services:
     depends_on:
       kafka:
         condition: service_healthy
+      otel-collector:
+        condition: service_healthy
     ports:
       - "8084:8080"
     environment:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+
+  # --- Observability ---
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.149.0
+    container_name: otel-collector
+    command: ["--config", "/etc/otelcol-contrib/config.yaml"]
+    volumes:
+      - ./infra/observability/otel-collector-config.yaml:/etc/otelcol-contrib/config.yaml:ro
+    ports:
+      - "4318:4318"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8888/metrics || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  jaeger:
+    image: jaegertracing/jaeger:2.17.0
+    container_name: jaeger
+    command: ["--config", "/etc/jaeger/config.yaml"]
+    volumes:
+      - ./infra/observability/jaeger-config.yaml:/etc/jaeger/config.yaml:ro
+    ports:
+      - "16686:16686"
+    depends_on:
+      otel-collector:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:16686/api/services || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  prometheus:
+    image: prom/prometheus:v3.10.0
+    container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--enable-feature=exemplar-storage'
+    volumes:
+      - ./infra/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      otel-collector:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  loki:
+    image: grafana/loki:3.7.0
+    container_name: loki
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    volumes:
+      - ./infra/observability/loki-config.yaml:/etc/loki/local-config.yaml:ro
+    ports:
+      - "3100:3100"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3100/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  grafana:
+    image: grafana/grafana:11.6.14
+    container_name: grafana
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Admin"
+    volumes:
+      - ./infra/observability/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      prometheus:
+        condition: service_healthy
+      jaeger:
+        condition: service_healthy
+      loki:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
