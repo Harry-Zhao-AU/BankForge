@@ -71,6 +71,18 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- OpenTelemetry — auto-configures traces + metrics via OTLP (D-01) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-opentelemetry</artifactId>
+        </dependency>
+
+        <!-- OTel Logback Appender — ships log events via OTLP (D-07) -->
+        <dependency>
+            <groupId>io.opentelemetry.instrumentation</groupId>
+            <artifactId>opentelemetry-logback-appender-1.0</artifactId>
+        </dependency>
+
         <!-- Test dependencies -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
