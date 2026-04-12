@@ -91,8 +91,8 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Observability infrastructure: OTel Collector, Jaeger v2, Prometheus, Loki, Grafana configs and compose.yml integration
-- [ ] 02-02-PLAN.md — Service OTel instrumentation: spring-boot-starter-opentelemetry, logback appender, context propagation, custom banking metrics
+- [x] 02-01-PLAN.md — Observability infrastructure: OTel Collector, Jaeger v2, Prometheus, Loki, Grafana configs and compose.yml integration
+- [x] 02-02-PLAN.md — Service OTel instrumentation: spring-boot-starter-opentelemetry, logback appender, context propagation, custom banking metrics
 - [ ] 02-03-PLAN.md — Grafana banking dashboard, smoke test script, end-to-end human verification
 
 ---
