@@ -9,6 +9,10 @@ import au.com.bankforge.payment.dto.InitiateTransferResponse;
 import au.com.bankforge.payment.dto.TransferStatusResponse;
 import au.com.bankforge.payment.entity.Transfer;
 import au.com.bankforge.payment.repository.TransferRepository;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -49,6 +53,36 @@ public class PaymentService {
     private final IdempotencyService idempotencyService;
     private final AccountServiceClient accountServiceClient;
     private final ObjectMapper objectMapper; // tools.jackson.databind.ObjectMapper (Jackson 3)
+    private final MeterRegistry meterRegistry;
+
+    private Counter transferAmountCounter;
+    private Counter transferDltCounter;
+    private Timer transferDurationTimer;
+
+    @PostConstruct
+    void initMetrics() {
+        transferAmountCounter = Counter.builder("transfer_amount_total")
+            .description("Total AUD amount transferred")
+            .tag("service", "payment-service")
+            .register(meterRegistry);
+        transferDltCounter = Counter.builder("transfer_dlt_messages_total")
+            .description("Messages routed to dead letter topic")
+            .tag("service", "payment-service")
+            .register(meterRegistry);
+        transferDurationTimer = Timer.builder("transfer_duration")
+            .description("Time taken to process a transfer end-to-end")
+            .tag("service", "payment-service")
+            .register(meterRegistry);
+    }
+
+    private void incrementTransferInitiated(TransferState state) {
+        Counter.builder("transfer_initiated_total")
+            .description("Number of transfers initiated")
+            .tag("service", "payment-service")
+            .tag("state", state.name())
+            .register(meterRegistry)
+            .increment();
+    }
 
     /**
      * Initiates a fund transfer with idempotency protection.
@@ -61,73 +95,80 @@ public class PaymentService {
      */
     @Transactional
     public InitiateTransferResponse initiateTransfer(InitiateTransferRequest request) {
-        // Step 1: Idempotency check (Redis) per TXNS-05 — check BEFORE creating any DB record
-        Optional<String> cached = idempotencyService.getCached(request.idempotencyKey());
-        if (cached.isPresent()) {
-            log.info("Duplicate request detected for idempotency key: {}", request.idempotencyKey());
-            return deserialize(cached.get());
-        }
-
-        // Step 2: Create transfer record in PENDING state
-        Transfer transfer = Transfer.builder()
-                .fromAccountId(request.fromAccountId())
-                .toAccountId(request.toAccountId())
-                .amount(request.amount())
-                .idempotencyKey(request.idempotencyKey())
-                .description(request.description())
-                .state(TransferState.PENDING)
-                .build();
-        transfer = transferRepository.save(transfer);
-
-        try {
-            // Step 3: PENDING -> PAYMENT_PROCESSING
-            transfer.setState(stateMachine.transition(transfer.getState(), TransferEvent.INITIATE));
-            transfer = transferRepository.save(transfer);
-
-            // Step 4: Call account-service for ACID transfer execution
-            accountServiceClient.executeTransfer(
-                    request.fromAccountId(), request.toAccountId(),
-                    request.amount(), request.description());
-
-            // Step 5: PAYMENT_PROCESSING -> PAYMENT_DONE
-            transfer.setState(stateMachine.transition(transfer.getState(), TransferEvent.PAYMENT_COMPLETE));
-            transfer = transferRepository.save(transfer);
-
-            // Step 6: PAYMENT_DONE -> POSTING (ledger-service will handle confirmation in Phase 1.1)
-            transfer.setState(stateMachine.transition(transfer.getState(), TransferEvent.POST));
-            transfer = transferRepository.save(transfer);
-
-            // Step 7: POSTING -> CONFIRMED
-            // For Phase 1 only: auto-confirms since ledger-service is a stub.
-            // Phase 1.1 will make this event-driven via Kafka confirmation event.
-            transfer.setState(stateMachine.transition(transfer.getState(), TransferEvent.CONFIRM));
-            transfer = transferRepository.save(transfer);
-
-        } catch (Exception e) {
-            log.error("Transfer {} failed: {}", transfer.getId(), e.getMessage());
-            // Compensation path: current_state -> COMPENSATING -> CANCELLED
-            // TransferStateMachine supports FAIL from PAYMENT_PROCESSING, PAYMENT_DONE, and POSTING.
-            // The catch block correctly compensates regardless of which step threw.
-            try {
-                transfer.setState(stateMachine.transition(transfer.getState(), TransferEvent.FAIL));
-                transfer = transferRepository.save(transfer);
-                transfer.setState(stateMachine.transition(transfer.getState(), TransferEvent.COMPENSATE));
-                transfer.setErrorMessage(e.getMessage());
-                transfer = transferRepository.save(transfer);
-            } catch (Exception compensationError) {
-                log.error("Compensation failed for {}: {}", transfer.getId(), compensationError.getMessage());
-                transfer.setErrorMessage("Compensation failed: " + compensationError.getMessage());
-                transfer = transferRepository.save(transfer);
+        return transferDurationTimer.record(() -> {
+            // Step 1: Idempotency check (Redis) per TXNS-05 — check BEFORE creating any DB record
+            Optional<String> cached = idempotencyService.getCached(request.idempotencyKey());
+            if (cached.isPresent()) {
+                log.atInfo().addKeyValue("idempotencyKey", request.idempotencyKey()).log("Duplicate request detected");
+                return deserialize(cached.get());
             }
-        }
 
-        // Step 8: Cache response in Redis for future idempotent replays (TXNS-05)
-        InitiateTransferResponse response = new InitiateTransferResponse(
-                transfer.getId(), transfer.getFromAccountId(), transfer.getToAccountId(),
-                transfer.getAmount(), transfer.getState().name(), transfer.getCreatedAt());
-        idempotencyService.setIfNew(request.idempotencyKey(), serialize(response));
+            // Step 2: Create transfer record in PENDING state
+            Transfer transfer = Transfer.builder()
+                    .fromAccountId(request.fromAccountId())
+                    .toAccountId(request.toAccountId())
+                    .amount(request.amount())
+                    .idempotencyKey(request.idempotencyKey())
+                    .description(request.description())
+                    .state(TransferState.PENDING)
+                    .build();
+            transfer = transferRepository.save(transfer);
+            incrementTransferInitiated(TransferState.PENDING);
+            log.atInfo().addKeyValue("transferId", transfer.getId()).log("Transfer initiated");
 
-        return response;
+            try {
+                // Step 3: PENDING -> PAYMENT_PROCESSING
+                transfer.setState(stateMachine.transition(transfer.getState(), TransferEvent.INITIATE));
+                transfer = transferRepository.save(transfer);
+
+                // Step 4: Call account-service for ACID transfer execution
+                accountServiceClient.executeTransfer(
+                        request.fromAccountId(), request.toAccountId(),
+                        request.amount(), request.description());
+
+                // Step 5: PAYMENT_PROCESSING -> PAYMENT_DONE
+                transfer.setState(stateMachine.transition(transfer.getState(), TransferEvent.PAYMENT_COMPLETE));
+                transfer = transferRepository.save(transfer);
+
+                // Step 6: PAYMENT_DONE -> POSTING (ledger-service will handle confirmation in Phase 1.1)
+                transfer.setState(stateMachine.transition(transfer.getState(), TransferEvent.POST));
+                transfer = transferRepository.save(transfer);
+
+                // Step 7: POSTING -> CONFIRMED
+                // For Phase 1 only: auto-confirms since ledger-service is a stub.
+                // Phase 1.1 will make this event-driven via Kafka confirmation event.
+                transfer.setState(stateMachine.transition(transfer.getState(), TransferEvent.CONFIRM));
+                transfer = transferRepository.save(transfer);
+                incrementTransferInitiated(TransferState.CONFIRMED);
+                transferAmountCounter.increment(request.amount().doubleValue());
+
+            } catch (Exception e) {
+                log.error("Transfer {} failed: {}", transfer.getId(), e.getMessage());
+                // Compensation path: current_state -> COMPENSATING -> CANCELLED
+                // TransferStateMachine supports FAIL from PAYMENT_PROCESSING, PAYMENT_DONE, and POSTING.
+                // The catch block correctly compensates regardless of which step threw.
+                try {
+                    transfer.setState(stateMachine.transition(transfer.getState(), TransferEvent.FAIL));
+                    transfer = transferRepository.save(transfer);
+                    transfer.setState(stateMachine.transition(transfer.getState(), TransferEvent.COMPENSATE));
+                    transfer.setErrorMessage(e.getMessage());
+                    transfer = transferRepository.save(transfer);
+                    incrementTransferInitiated(TransferState.CANCELLED);
+                } catch (Exception compensationError) {
+                    log.error("Compensation failed for {}: {}", transfer.getId(), compensationError.getMessage());
+                    transfer.setErrorMessage("Compensation failed: " + compensationError.getMessage());
+                    transfer = transferRepository.save(transfer);
+                }
+            }
+
+            // Step 8: Cache response in Redis for future idempotent replays (TXNS-05)
+            InitiateTransferResponse response = new InitiateTransferResponse(
+                    transfer.getId(), transfer.getFromAccountId(), transfer.getToAccountId(),
+                    transfer.getAmount(), transfer.getState().name(), transfer.getCreatedAt());
+            idempotencyService.setIfNew(request.idempotencyKey(), serialize(response));
+
+            return response;
+        });
     }
 
     /**
