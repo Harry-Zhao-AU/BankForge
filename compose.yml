@@ -198,7 +198,6 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SERVICES_ACCOUNT_BASE_URL: http://account-service:8080
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
-      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_BOOT_AUTOCONFIGURE: DEBUG
 
   ledger-service:
     build:
