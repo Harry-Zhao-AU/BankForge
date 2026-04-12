@@ -198,7 +198,12 @@ A realistic Australian core banking platform demonstrating enterprise microservi
 <!-- GSD:conventions-start source:CONVENTIONS.md -->
 ## Conventions
 
-Conventions not yet established. Will populate as patterns emerge during development.
+### Container / Build Commands
+
+- **Always use `podman` and `podman compose`** — never `docker` or `docker-compose`. Docker Desktop is not installed; the container runtime is Podman (rootful, WSL2 backend).
+- **Maven skip flag for CI builds:** Use `-Dmaven.test.skip=true` to skip both test compilation and execution. `-DskipTests` only skips execution — tests still compile, which fails if test dependencies are missing.
+- **JAR file lock recovery:** If `mvn clean` fails with "file used by another process", run `podman machine stop`, delete the locked `target/` directory, then `podman machine start` before rebuilding. The Podman WSL2 machine holds file handles on mounted JARs even after `podman compose down`.
+- **Maven binary:** Use IntelliJ bundled Maven at `"C:/Program Files/JetBrains/IntelliJ IDEA Community Edition 2025.2.4/plugins/maven/lib/maven3/bin/mvn"` with `JAVA_HOME="C:/Program Files/JetBrains/IntelliJ IDEA Community Edition 2025.2.4/jbr"`.
 <!-- GSD:conventions-end -->
 
 <!-- GSD:architecture-start source:ARCHITECTURE.md -->

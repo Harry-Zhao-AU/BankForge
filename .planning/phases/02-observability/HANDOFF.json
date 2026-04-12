@@ -1,0 +1,47 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-04-12T08:52:25.058Z",
+  "phase": "02",
+  "phase_name": "observability",
+  "phase_dir": ".planning/phases/02-observability",
+  "plan": 3,
+  "task": 2,
+  "total_tasks": 2,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": 1, "name": "Create Grafana banking dashboard JSON and smoke test script", "status": "done", "commit": "0a254ec"},
+    {"id": 2, "name": "End-to-end observability verification", "status": "in_progress", "progress": "All code fixes committed (fac61f7, e346ae5). JARs rebuilt with -Dmaven.test.skip=true. Podman machine restarted but was still starting when session paused. Container images NOT yet rebuilt with --build."}
+  ],
+  "remaining_tasks": [
+    {"id": 2, "name": "Verify Podman machine Running, podman compose up -d --build, generate transfer, smoke-test --full, browser verify Jaeger/Prometheus/Grafana/Loki, write 02-03-SUMMARY.md", "status": "in_progress"}
+  ],
+  "blockers": [
+    {
+      "description": "Podman machine was in 'Currently starting' state when session paused. Verify it reached Running before compose up.",
+      "type": "human_action",
+      "workaround": "podman machine list — if not Running, run: podman machine stop && podman machine start"
+    }
+  ],
+  "human_actions_pending": [
+    {
+      "action": "Check: podman machine list → must show Running. Then: podman compose up -d --build",
+      "context": "Machine was restarted to release JAR file lock. JARs rebuilt with actuator. Need --build to rebuild container images with new JARs.",
+      "blocking": true
+    },
+    {
+      "action": "Verify full observability pipeline in browser (Steps 3-7 from 02-03-PLAN.md Task 2)",
+      "context": "Jaeger http://localhost:16686, Prometheus http://localhost:9090, Grafana http://localhost:3000, Loki via Grafana Explore",
+      "blocking": true
+    }
+  ],
+  "decisions": [
+    {"decision": "Always use podman / podman compose — never docker", "rationale": "Docker Desktop not installed. Added to CLAUDE.md Conventions.", "phase": "02"},
+    {"decision": "-Dmaven.test.skip=true not -DskipTests for build-only", "rationale": "-DskipTests skips execution but still compiles tests. ledger-service test had missing PostgreSQLContainer causing compile failure. -Dmaven.test.skip=true skips both.", "phase": "02"},
+    {"decision": "Podman machine stop/start releases WSL2 JAR file locks", "rationale": "After podman compose down, Podman WSL2 machine still held write lock on payment-service JAR. Stopping the machine released it.", "phase": "02"},
+    {"decision": "spring-boot-starter-actuator was the sole OTel root cause", "rationale": "Without actuator, ObservationRegistry absent from classpath, blocking all OTel auto-configurations. Fixed in e346ae5.", "phase": "02"},
+    {"decision": "Diagnostic LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_BOOT_AUTOCONFIGURE removed from compose.yml", "rationale": "Was temporary for conditions report. Root cause found and fixed. Removed in fac61f7.", "phase": "02"}
+  ],
+  "uncommitted_files": [],
+  "next_action": "1. podman machine list — verify Running. 2. podman compose up -d --build. 3. Wait ~90s. 4. ./scripts/smoke-test-obs.sh. 5. POST /api/payments/transfers to generate traffic. 6. Browser verify: Jaeger traces, Prometheus metrics, Grafana dashboard, Loki logs. 7. ./scripts/smoke-test-obs.sh --full. 8. Write 02-03-SUMMARY.md.",
+  "context_notes": "All code fixes committed. OTel pipeline should work after image rebuild: actuator on classpath → ObservationRegistry → all OTel auto-configurations activate. Tracing: management.opentelemetry.tracing.export.otlp.endpoint. Logging: management.opentelemetry.logging.export.otlp.endpoint. Metrics: management.otlp.metrics.export.url. All resolve to http://otel-collector:4318 via OTEL_EXPORTER_OTLP_ENDPOINT env var. Alice: 8687a7c8-a697-45b7-8fc3-6be104db29ad, Bob: f579b5bc-eb58-4022-9b6f-c5189fa76b9f. Transfer endpoint: POST /api/payments/transfers (plural). Stale worktree agent-ac5d1e82 still needs cleanup after phase completes."
+}
