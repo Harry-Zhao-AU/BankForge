@@ -88,7 +88,12 @@ Plans:
   2. Prometheus scrapes metrics from all four services and they appear in the Grafana banking dashboard, showing transfer volume, p99 latency, and error rate panels with real data
   3. Structured ECS-format logs from all services are queryable in Grafana Loki by service name, transfer ID, and log level — a LogQL query for a specific transfer ID returns matching entries across services
 
-**Plans**: TBD
+**Plans:** 3 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Observability infrastructure: OTel Collector, Jaeger v2, Prometheus, Loki, Grafana configs and compose.yml integration
+- [ ] 02-02-PLAN.md — Service OTel instrumentation: spring-boot-starter-opentelemetry, logback appender, context propagation, custom banking metrics
+- [ ] 02-03-PLAN.md — Grafana banking dashboard, smoke test script, end-to-end human verification
 
 ---
 
@@ -172,7 +177,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Service Scaffold + Core Banking | 4/4 | Complete   | 2026-04-10 |
 | 1.1. CDC Pipeline + Compliance | 0/? | Not started | - |
-| 2. Observability | 0/? | Not started | - |
+| 2. Observability | 0/3 | Planned | - |
 | 3. Service Mesh & Auth | 0/? | Not started | - |
 | 4. Graph & RCA Foundation | 0/? | Not started | - |
 | 5. AI Integration / MCP | 0/? | Not started | - |
@@ -224,4 +229,4 @@ Plans:
 ---
 
 *Roadmap created: 2026-04-10*
-*Last updated: 2026-04-10 after Phase 1 planning*
+*Last updated: 2026-04-12 after Phase 2 planning*
