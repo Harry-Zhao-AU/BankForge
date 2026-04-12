@@ -11,17 +11,17 @@ check() {
     local name="$1" cmd="$2"
     if eval "$cmd" > /dev/null 2>&1; then
         echo "  [PASS] $name"
-        ((PASS++))
+        PASS=$((PASS + 1))
     else
         echo "  [FAIL] $name"
-        ((FAIL++))
+        FAIL=$((FAIL + 1))
     fi
 }
 
 echo "=== BankForge Observability Smoke Test ==="
 echo ""
 echo "--- Service Health ---"
-check "OTel Collector healthy" "curl -sf http://localhost:4318/v1/traces > /dev/null 2>&1 || curl -sf http://localhost:8888/metrics > /dev/null 2>&1"
+check "OTel Collector healthy" "[ \"\$(curl -s --max-time 3 -o /dev/null -w '%{http_code}' http://localhost:4318/)\" != '000' ]"
 check "Jaeger UI reachable" "curl -sf http://localhost:16686/api/services"
 check "Prometheus healthy" "curl -sf http://localhost:9090/-/healthy"
 check "Loki ready" "curl -sf http://localhost:3100/ready"

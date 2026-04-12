@@ -1,0 +1,41 @@
+{
+  "version": "1.0",
+  "timestamp": "2026-04-12T07:55:17.348Z",
+  "phase": "02",
+  "phase_name": "observability",
+  "phase_dir": ".planning/phases/02-observability",
+  "plan": 3,
+  "task": 2,
+  "total_tasks": 2,
+  "status": "paused",
+  "completed_tasks": [
+    {"id": 1, "name": "Create Grafana banking dashboard JSON and smoke test script", "status": "done", "commit": "0a254ec"},
+    {"id": 2, "name": "End-to-end observability verification", "status": "in_progress", "progress": "Smoke test passes 7/7 (after fixing OTel check + arithmetic bug). Transfers succeed. OTel pipeline NOT flowing — banking services not sending traces/metrics/logs to collector. Root cause partially diagnosed: wrong logging property key AND unknown tracing condition failure."}
+  ],
+  "remaining_tasks": [
+    {"id": 2, "name": "Identify and fix OTel pipeline root cause, re-run full verification, write 02-03 SUMMARY.md", "status": "in_progress"}
+  ],
+  "blockers": [
+    {
+      "description": "Banking services not sending any OTel data to collector. Two bugs confirmed: (1) logging property wrong — management.otlp.logging.export.endpoint does not exist, correct key is management.opentelemetry.logging.export.otlp.endpoint. (2) Tracing property management.opentelemetry.tracing.export.otlp.endpoint IS correct per JAR metadata but traces still not flowing — unknown condition failure.",
+      "type": "technical",
+      "workaround": "Revert logging property fix from commit 6ba6aed. For tracing, run service with LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_BOOT_AUTOCONFIGURE=DEBUG env var to get conditions report."
+    }
+  ],
+  "human_actions_pending": [
+    {
+      "action": "Verify Grafana dashboard panels show data after OTel pipeline fix",
+      "context": "Steps 3-6 from 02-03-PLAN.md Task 2 require browser verification (Jaeger, Prometheus, Grafana, Loki)",
+      "blocking": true
+    }
+  ],
+  "decisions": [
+    {"decision": "smoke-test OTel check changed from -sf (fails on 4xx) to HTTP response code check", "rationale": "OTel Collector port 4318 returns 405 on GET — correct behavior, but -sf treats 4xx as failure", "phase": "02"},
+    {"decision": "Loki healthcheck removed from compose.yml", "rationale": "Loki 3.7.0 image is distroless (no shell/nc), healthcheck cmd-shell fails. No services depend on service_healthy for loki.", "phase": "02"},
+    {"decision": "smoke-test counter increments changed from ((PASS++)) to PASS=$((PASS+1))", "rationale": "((0++)) evaluates to 0 which is falsy under set -e, killing the script after first check", "phase": "02"},
+    {"decision": "management.otlp.logging.export.endpoint (commit 6ba6aed) is WRONG property", "rationale": "spring-boot-opentelemetry-4.0.5.jar metadata confirms correct key is management.opentelemetry.logging.export.otlp.endpoint. Previous session incorrectly identified the fix.", "phase": "02"}
+  ],
+  "uncommitted_files": ["compose.yml", "scripts/smoke-test-obs.sh"],
+  "next_action": "Fix management.opentelemetry.logging.export.otlp.endpoint in all 4 application.yml files, then run payment-service with LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_BOOT_AUTOCONFIGURE=DEBUG to get auto-configuration conditions report for tracing, fix whatever is failing, rebuild containers, verify end-to-end pipeline.",
+  "context_notes": "Spring Boot 4.0.5 OpenTelemetrySdkAutoConfiguration builds SDK from Spring customizer beans, NOT from standard OTEL_* env vars. All export configuration must be via management.opentelemetry.* properties. The OtlpTracingConfigurations$ConnectionDetails has @ConditionalOnProperty on management.opentelemetry.tracing.export.otlp.endpoint — this IS set correctly in application.yml, but traces still not flowing. Debug logging is needed to see which condition actually fails. Worktree agent-ac5d1e82 is behind master and should be deleted after 02-03 is complete."
+}
