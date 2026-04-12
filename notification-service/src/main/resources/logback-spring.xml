@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <!-- Import Spring Boot default console appender -->
-    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
-    <include resource="org/springframework/boot/logging/logback/console-appender.xml"/>
+    <include resource="org/springframework/boot/logging/logback/base.xml"/>
 
     <!-- Configurable audit log path — overridable via Spring property log.austrac.path -->
     <springProperty scope="context" name="austracLogPath"
@@ -30,7 +29,12 @@
         <appender-ref ref="AUSTRAC_FILE"/>
     </logger>
 
+    <appender name="OTEL"
+              class="io.opentelemetry.instrumentation.logback.appender.v1_0.OpenTelemetryAppender">
+    </appender>
+
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>
+        <appender-ref ref="OTEL"/>
     </root>
 </configuration>
