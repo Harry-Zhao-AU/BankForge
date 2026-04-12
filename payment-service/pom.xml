@@ -83,6 +83,12 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- Micrometer Observation — ObservationRegistry + ObservationProperties required by OTel auto-config -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
         <!-- OpenTelemetry — auto-configures traces + metrics via OTLP (D-01) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

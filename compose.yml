@@ -169,6 +169,8 @@ services:
         condition: service_started
     ports:
       - "8081:8080"
+    volumes:
+      - ./account-service/src/main/resources/application.yml:/app/application.yml:ro
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://account-db:5432/accountdb
       SPRING_DATASOURCE_USERNAME: account
@@ -187,6 +189,8 @@ services:
         condition: service_started
     ports:
       - "8082:8080"
+    volumes:
+      - ./payment-service/src/main/resources/application.yml:/app/application.yml:ro
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://payment-db:5432/paymentdb
       SPRING_DATASOURCE_USERNAME: payment
@@ -194,6 +198,7 @@ services:
       SPRING_DATA_REDIS_HOST: redis
       SERVICES_ACCOUNT_BASE_URL: http://account-service:8080
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
+      LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_BOOT_AUTOCONFIGURE: DEBUG
 
   ledger-service:
     build:
@@ -207,6 +212,8 @@ services:
         condition: service_started
     ports:
       - "8083:8080"
+    volumes:
+      - ./ledger-service/src/main/resources/application.yml:/app/application.yml:ro
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://ledger-db:5432/ledgerdb
       SPRING_DATASOURCE_USERNAME: ledger
@@ -224,6 +231,8 @@ services:
         condition: service_started
     ports:
       - "8084:8080"
+    volumes:
+      - ./notification-service/src/main/resources/application.yml:/app/application.yml:ro
     environment:
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
