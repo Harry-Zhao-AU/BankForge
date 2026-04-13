@@ -56,17 +56,30 @@ public class TransferStateService {
     }
 
     /**
-     * Advances a transfer: PAYMENT_PROCESSING → PAYMENT_DONE → POSTING → CONFIRMED.
+     * Advances a transfer: PAYMENT_PROCESSING → PAYMENT_DONE → POSTING.
      * Runs in a new transaction independent of the caller's context.
+     * POSTING → CONFIRMED is driven asynchronously by TransferConfirmationListener
+     * when ledger-service publishes banking.transfer.confirmed.
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public Transfer complete(UUID transferId) {
+    public Transfer advanceToPosting(UUID transferId) {
         Transfer transfer = transferRepository.findById(transferId)
                 .orElseThrow(() -> new IllegalStateException("Transfer not found: " + transferId));
         transfer.setState(stateMachine.transition(transfer.getState(), TransferEvent.PAYMENT_COMPLETE));
         transfer = transferRepository.save(transfer);
         transfer.setState(stateMachine.transition(transfer.getState(), TransferEvent.POST));
-        transfer = transferRepository.save(transfer);
+        return transferRepository.save(transfer);
+    }
+
+    /**
+     * Advances a transfer: POSTING → CONFIRMED.
+     * Called by TransferConfirmationListener when ledger-service publishes banking.transfer.confirmed.
+     * Runs in REQUIRES_NEW so it always commits in a fresh transaction.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public Transfer confirm(UUID transferId) {
+        Transfer transfer = transferRepository.findById(transferId)
+                .orElseThrow(() -> new IllegalStateException("Transfer not found: " + transferId));
         transfer.setState(stateMachine.transition(transfer.getState(), TransferEvent.CONFIRM));
         return transferRepository.save(transfer);
     }

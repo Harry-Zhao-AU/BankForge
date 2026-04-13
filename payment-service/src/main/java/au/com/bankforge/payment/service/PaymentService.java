@@ -28,7 +28,7 @@ import java.util.UUID;
  *   1. Redis idempotency check (TXNS-05) — return cached response if duplicate
  *   2. Persist Transfer PENDING → PAYMENT_PROCESSING in an isolated TX (via TransferStateService)
  *   3. Call account-service for ACID fund transfer execution (outside any transaction)
- *   4. On success: PAYMENT_PROCESSING → PAYMENT_DONE → POSTING → CONFIRMED (new isolated TX)
+ *   4. On success: PAYMENT_PROCESSING → PAYMENT_DONE → POSTING (new isolated TX); ledger confirms async
  *   5. On failure: best-effort reversal call to account-service, then FAIL → COMPENSATING → CANCELLED
  *   6. Cache response in Redis for future idempotent replays
  *
@@ -137,16 +137,9 @@ public class PaymentService {
                         request.amount(), request.description());
                 transferExecuted = true;
 
-                // Step 4: PAYMENT_PROCESSING → PAYMENT_DONE → POSTING → CONFIRMED (new isolated TX)
-                //
-                // NOTE (Phase 1 stub): POSTING → CONFIRMED is auto-confirmed here because
-                // ledger-service does not yet publish a confirmation event. This will become
-                // event-driven in a future phase: ledger-service publishes banking.transfer.confirmed
-                // after writing the double-entry pair, and a @KafkaListener here transitions
-                // POSTING → CONFIRMED asynchronously. Until then, the transfer is confirmed
-                // without waiting for ledger acknowledgement.
-                transfer = transferStateService.complete(transfer.getId());
-                incrementTransferInitiated(TransferState.CONFIRMED);
+                // Step 4: PAYMENT_PROCESSING → PAYMENT_DONE → POSTING (ledger confirms async via Kafka)
+                transfer = transferStateService.advanceToPosting(transfer.getId());
+                incrementTransferInitiated(TransferState.POSTING);
                 transferAmountCounter.increment(request.amount().doubleValue());
 
             } catch (Exception e) {
