@@ -114,7 +114,7 @@
             "uid": "prometheus"
           },
           "exemplar": true,
-          "expr": "histogram_quantile(0.99, rate(transfer_duration_seconds_bucket{service=\"payment-service\"}[5m]))",
+          "expr": "histogram_quantile(0.99, rate(transfer_duration_milliseconds_bucket{service=\"payment-service\"}[5m]))",
           "legendFormat": "p99",
           "refId": "A"
         }

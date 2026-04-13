@@ -72,6 +72,7 @@ public class PaymentService {
         transferDurationTimer = Timer.builder("transfer_duration")
             .description("Time taken to process a transfer end-to-end")
             .tag("service", "payment-service")
+            .publishPercentileHistogram(true)
             .register(meterRegistry);
     }
 
