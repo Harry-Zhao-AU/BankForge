@@ -84,7 +84,7 @@
             "lineWidth": 2,
             "spanNulls": false
           },
-          "unit": "s"
+          "unit": "ms"
         },
         "overrides": []
       },
@@ -119,7 +119,7 @@
           "refId": "A"
         }
       ],
-      "title": "Transfer Latency p99",
+      "title": "Transfer Latency p99 (ms)",
       "type": "timeseries"
     },
     {
