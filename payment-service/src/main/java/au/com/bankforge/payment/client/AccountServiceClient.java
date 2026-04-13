@@ -53,6 +53,34 @@ public class AccountServiceClient {
     }
 
     /**
+     * Reverses a previously executed transfer by moving funds back (swap from/to).
+     *
+     * Called in the compensation path when executeTransfer() returned successfully
+     * (money moved) but a subsequent step failed. Not called when executeTransfer()
+     * itself threw — in that case the outcome is uncertain and manual review is required.
+     *
+     * @param originalFromAccountId account that was debited in the original transfer
+     * @param originalToAccountId   account that was credited in the original transfer
+     * @param amount                original transfer amount
+     * @param description           reversal description for audit trail
+     * @return AccountTransferResponse confirming the reversal
+     */
+    public AccountTransferResponse reverseTransfer(
+            UUID originalFromAccountId, UUID originalToAccountId,
+            BigDecimal amount, String description) {
+        return accountRestClient.post()
+                .uri("/api/internal/transfers")
+                .body(Map.of(
+                        "fromAccountId", originalToAccountId,
+                        "toAccountId", originalFromAccountId,
+                        "amount", amount,
+                        "description", description != null ? description : ""
+                ))
+                .retrieve()
+                .body(AccountTransferResponse.class);
+    }
+
+    /**
      * Local record matching the account-service TransferResponse JSON.
      * amount is BigDecimal per D-09.
      */
