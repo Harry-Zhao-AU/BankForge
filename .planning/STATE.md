@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-04-13T10:00:00.000Z"
+last_updated: "2026-04-13T12:50:00.000Z"
 progress:
   total_phases: 6
   completed_phases: 2
@@ -115,6 +115,7 @@ Overall:  [████░░░░░░] ~35% (phases 1, 1.1, 2 complete)
 | Debezium connector must be re-registered after every stack restart | infra/debezium/outbox-connector.json is not auto-applied on `podman compose up`. Without it, ledger/notification receive no Kafka events → no traces or Loki logs. Register with: `curl -X POST http://localhost:8085/connectors -d @infra/debezium/outbox-connector.json` | Phase 2 P03 |
 | Idle services absent from Loki until first log event | OTel log appender only exports on log events. Services appear in Loki after first request or Kafka message — not a configuration issue, just warmup behaviour. | Phase 2 P03 |
 | CreateAccountRequest uses `initialBalance` field (not `balance`) | API field name is `initialBalance`; sending `balance` silently ignores the value and creates account with 0 balance. | Phase 2 P03 |
+| POSTING→CONFIRMED is event-driven via banking.transfer.confirmed | ledger-service publishes confirmation after writing debit+credit pair; payment-service @KafkaListener (TransferConfirmationListener) calls TransferStateService.confirm() in REQUIRES_NEW tx. HTTP response returns POSTING; CONFIRMED arrives async. | Quick 260413-vd1 |
 
 ### Open Questions (Pre-Phase Blockers)
 
@@ -151,12 +152,13 @@ None currently.
 
 ## Session Continuity
 
-**Last session:** 2026-04-13T10:00:00.000Z
+**Last session:** 2026-04-13T12:50:00.000Z
 
-**Resume point:** Phase 2 complete. Next: Phase 3 — Service Mesh & Auth. Run `/gsd-discuss-phase 3` or `/gsd-plan-phase 3`.
+**Resume point:** Phase 2 complete + event-driven saga loop wired. Next: Phase 3 — Service Mesh & Auth. Run `/gsd-discuss-phase 3` or `/gsd-plan-phase 3`.
 
 **Context to carry forward:**
 
+- POSTING→CONFIRMED is now event-driven: HTTP response returns POSTING; ledger publishes banking.transfer.confirmed; TransferConfirmationListener confirms async. TransferStateService.complete() is gone — replaced by advanceToPosting() + confirm().
 - Phase 3 is highest-risk: Istio PERMISSIVE then STRICT, RS256 JWT, resource limits to prevent OOMKill
 - Phase 4 ETL depends on Istio metrics being in Prometheus first — do not start ETL until traffic is flowing
 - Debezium connector must be re-registered after every `podman compose up` — it is NOT auto-registered
@@ -168,4 +170,4 @@ None currently.
 ---
 
 *State initialized: 2026-04-10*
-*Last updated: 2026-04-13 — Phase 2 Observability complete (OBS-01..05 delivered)*
+*Last updated: 2026-04-13 — Quick 260413-vd1: event-driven POSTING→CONFIRMED Saga loop wired*
