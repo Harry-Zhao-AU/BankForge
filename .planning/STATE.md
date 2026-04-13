@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-04-11T03:55:43.565Z"
+status: in_progress
+last_updated: "2026-04-13T10:00:00.000Z"
 progress:
   total_phases: 6
   completed_phases: 2
-  total_plans: 7
+  total_plans: 10
   completed_plans: 7
-  percent: 100
+  percent: 35
 ---
 
 # State: BankForge
@@ -22,7 +22,7 @@ progress:
 
 **Core Value:** A running, end-to-end system where every enterprise pattern (ACID, Saga, Outbox, mTLS, distributed tracing) is implemented and queryable via AI agent — proving the patterns work together, not just in theory.
 
-**Current Focus:** Phase 01.1 — cdc-pipeline-compliance-kind-spike
+**Current Focus:** Phase 3 — Service Mesh & Auth (next up)
 
 **Total Phases:** 6
 
@@ -30,18 +30,17 @@ progress:
 
 ## Current Position
 
-Phase: 01.1 (cdc-pipeline-compliance-kind-spike) — EXECUTING
-Plan: 1 of 3
+Phase: 2 (observability) — COMPLETE
 | Field | Value |
 |-------|-------|
-| Phase | 1 — ACID Core + CDC Pipeline |
-| Plan | 01-01 COMPLETE; 01-02 COMPLETE; 01-03 COMPLETE; 01-04 COMPLETE |
-| Status | Phase 1 complete — ready for Phase 1.1 |
-| Phase progress | 100% (4/4 plans) |
+| Phase | 2 — Observability |
+| Plan | 02-01 COMPLETE; 02-02 COMPLETE; 02-03 COMPLETE |
+| Status | Phase 2 complete — ready for Phase 3 |
+| Phase progress | 100% (3/3 plans) |
 
 ```
-Progress: Phase 1 [██████████] 100%
-Overall:  [██░░░░░░░░] ~17% (1/6 phases completed)
+Progress: Phase 2 [██████████] 100%
+Overall:  [████░░░░░░] ~35% (phases 1, 1.1, 2 complete)
 ```
 
 ---
@@ -51,8 +50,8 @@ Overall:  [██░░░░░░░░] ~17% (1/6 phases completed)
 | Phase | Name | Status | Plans | Completed |
 |-------|------|--------|-------|-----------|
 | 1 | Service Scaffold + Core Banking | COMPLETE | 4/4 | 2026-04-10 |
-| 1.1 | CDC Pipeline + Compliance + Kind Spike | Ready to execute | 3/3 planned | - |
-| 2 | Observability | Not started | TBD | - |
+| 1.1 | CDC Pipeline + Compliance + Kind Spike | COMPLETE | 3/3 | 2026-04-11 |
+| 2 | Observability | COMPLETE | 3/3 | 2026-04-13 |
 | 3 | Service Mesh & Auth | Not started | TBD | - |
 | 4 | Graph & RCA Foundation | Not started | TBD | - |
 | 5 | AI Integration / MCP | Not started | TBD | - |
@@ -63,17 +62,23 @@ Overall:  [██░░░░░░░░] ~17% (1/6 phases completed)
 
 | Metric | Value |
 |--------|-------|
-| Phases completed | 1/6 |
-| Requirements delivered | 6/34 (CORE-01, CORE-02, CORE-03, TXNS-01, TXNS-04, TXNS-05) |
-| Plans created | 7 |
-| Plans completed | 4 |
+| Phases completed | 3/6 (1, 1.1, 2) |
+| Requirements delivered | 11/34 (CORE-01..05, TXNS-01..03, AUBN-01..02, OBS-01..05) |
+| Plans created | 10 |
+| Plans completed | 10 |
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
 | Phase 01-acid-core-cdc-pipeline P01 | 13 min | 3 tasks | 29 files |
-| Phase 01-acid-core-cdc-pipeline P02 | 15 | 3 tasks | 25 files |
-| Phase 01-acid-core-cdc-pipeline P03 | 14 | 3 tasks | 19 files |
+| Phase 01-acid-core-cdc-pipeline P02 | 15 min | 3 tasks | 25 files |
+| Phase 01-acid-core-cdc-pipeline P03 | 14 min | 3 tasks | 19 files |
 | Phase 01-acid-core-cdc-pipeline P04 | human-verify | 3 tasks | 5 files |
+| Phase 01.1 P01 | agent | 3 tasks | — |
+| Phase 01.1 P02 | agent | 3 tasks | — |
+| Phase 01.1 P03 | agent | 3 tasks | — |
+| Phase 02-observability P01 | agent | 3 tasks | 7 files |
+| Phase 02-observability P02 | agent | 4 tasks | 23 files |
+| Phase 02-observability P03 | multi-session | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -106,6 +111,10 @@ Overall:  [██░░░░░░░░] ~17% (1/6 phases completed)
 | @MockitoBean replaces @MockBean in Spring Boot 4 | @MockBean was removed from spring-boot-test 4.0.x; @MockitoBean from org.springframework.test.context.bean.override.mockito (spring-test 7.0.6) is the direct replacement | Phase 1 P03 |
 | RestClient @Bean named "accountRestClient" (not "accountServiceClient") | @Bean method name matching @Component class name causes BeanDefinitionOverrideException; explicit name + @Qualifier injection required | Phase 1 P03 |
 | isNewTransfer() called in controller before initiateTransfer() | Captures Redis idempotency state at request arrival for correct 201 vs 200 HTTP status; if checked inside service, both new and replay would see key already set | Phase 1 P03 |
+| Grafana latency panel unit must be `ms` not `s` | transfer_duration_milliseconds_bucket le values are in milliseconds (Micrometer Timer base unit). Using `s` displays 44.7ms as "44.7 seconds". | Phase 2 P03 |
+| Debezium connector must be re-registered after every stack restart | infra/debezium/outbox-connector.json is not auto-applied on `podman compose up`. Without it, ledger/notification receive no Kafka events → no traces or Loki logs. Register with: `curl -X POST http://localhost:8085/connectors -d @infra/debezium/outbox-connector.json` | Phase 2 P03 |
+| Idle services absent from Loki until first log event | OTel log appender only exports on log events. Services appear in Loki after first request or Kafka message — not a configuration issue, just warmup behaviour. | Phase 2 P03 |
+| CreateAccountRequest uses `initialBalance` field (not `balance`) | API field name is `initialBalance`; sending `balance` silently ignores the value and creates account with 0 balance. | Phase 2 P03 |
 
 ### Open Questions (Pre-Phase Blockers)
 
@@ -115,7 +124,7 @@ Overall:  [██░░░░░░░░] ~17% (1/6 phases completed)
 | Does Podman rootless work with kind on this machine? | Phase 1 spike, Phase 3 | RESOLVED — rootful Podman works. WSL2 workarounds: kind network --disable-dns + k8s-file log driver. See Key Decisions table. |
 | Spring State Machine vs hand-rolled enum FSM? | Phase 1 design | RESOLVED — Spring State Machine 4.0.1 targets Spring Framework 6.2 only; incompatible with Spring Boot 4. Using enum FSM in common module. |
 | CDC-only outbox vs polling outbox? | Phase 1 design | MEDIUM — decide once, document; CDC-only recommended |
-| Exact OTel property key names for the Spring Boot version in use | Phase 2 | LOW — verify before wiring OTel Collector |
+| Exact OTel property key names for the Spring Boot version in use | Phase 2 | RESOLVED — correct keys: management.opentelemetry.tracing.export.otlp.endpoint, management.opentelemetry.logging.export.otlp.endpoint, management.otlp.metrics.export.url |
 | Kong JWT plugin vs JWKS-based dynamic validation | Phase 3 | MEDIUM — built-in jwt plugin breaks on Keycloak key rotation |
 | Istio version and Kubernetes compatibility matrix | Phase 3 | HIGH — check before installing Istio |
 | Verify actual Prometheus Istio metric label names against running system | Phase 4 | HIGH — ETL must use real label names, not assumed ones |
@@ -142,26 +151,21 @@ None currently.
 
 ## Session Continuity
 
-**Last session:** 2026-04-10T09:00:00.000Z
+**Last session:** 2026-04-13T10:00:00.000Z
 
-**Resume point:** Phase 1.1 planned (3 plans, verified). Run `/gsd-execute-phase 1.1` to begin execution.
+**Resume point:** Phase 2 complete. Next: Phase 3 — Service Mesh & Auth. Run `/gsd-discuss-phase 3` or `/gsd-plan-phase 3`.
 
 **Context to carry forward:**
 
-- Phase 1.1 has 3 plans: 01.1-01 (Kafka+Debezium), 01.1-02 (AUSTRAC), 01.1-03 (kind spike)
-- Plans 01 and 03 are Wave 1 (can run in parallel); Plan 02 depends on Plan 01
-- AUBN-01 (BSB validation) is already done — Phase 1.1 only adds regression check, no re-implementation
-- Debezium uses `quay.io/debezium/connect:3.1` (Docker Hub gone since 2.7)
-- Kafka uses `apache/kafka:3.9.2` with native `KAFKA_*` env vars (not bitnami)
-- Connector uses `topic.prefix` (not `database.server.name`); `table.include.list` (not whitelist)
-- `aggregatetype` must be lowercase `"transfer"` (not `"Transfer"`) — EventRouter case-sensitive topic routing
-- kind spike (Plan 03): kind+kubectl must be installed in WSL2; Podman machine is already rootful
 - Phase 3 is highest-risk: Istio PERMISSIVE then STRICT, RS256 JWT, resource limits to prevent OOMKill
 - Phase 4 ETL depends on Istio metrics being in Prometheus first — do not start ETL until traffic is flowing
+- Debezium connector must be re-registered after every `podman compose up` — it is NOT auto-registered
 - @MockBean is GONE in Spring Boot 4 — always use @MockitoBean / @SpyBean
 - RestClient @Bean names must not match any @Component class name in scan path — name explicitly
+- CreateAccountRequest uses `initialBalance` (not `balance`) for opening balance
+- OTel property keys verified: tracing=management.opentelemetry.tracing.export.otlp.endpoint, logging=management.opentelemetry.logging.export.otlp.endpoint, metrics=management.otlp.metrics.export.url
 
 ---
 
 *State initialized: 2026-04-10*
-*Last updated: 2026-04-10 after Phase 1.1 planning — 3 plans ready to execute*
+*Last updated: 2026-04-13 — Phase 2 Observability complete (OBS-01..05 delivered)*
