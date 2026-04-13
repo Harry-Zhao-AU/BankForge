@@ -1,6 +1,9 @@
 package au.com.bankforge.ledger.kafka;
 
 import au.com.bankforge.ledger.repository.LedgerEntryRepository;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -13,6 +16,9 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
+import java.time.Duration;
+import java.util.Collections;
+import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -74,5 +80,28 @@ class LedgerEventListenerIT {
             assertThat(entries).anyMatch(e -> "DEBIT".equals(e.getEntryType()));
             assertThat(entries).anyMatch(e -> "CREDIT".equals(e.getEntryType()));
         });
+
+        // Also verify that banking.transfer.confirmed was published by LedgerEventListener
+        Properties consumerProps = new Properties();
+        consumerProps.put("bootstrap.servers", kafka.getBootstrapServers());
+        consumerProps.put("group.id", "it-verifier-" + UUID.randomUUID());
+        consumerProps.put("auto.offset.reset", "earliest");
+        consumerProps.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        consumerProps.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+
+        try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(consumerProps)) {
+            consumer.subscribe(Collections.singletonList("banking.transfer.confirmed"));
+            await().atMost(15, TimeUnit.SECONDS).untilAsserted(() -> {
+                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(500));
+                boolean found = false;
+                for (ConsumerRecord<String, String> r : records) {
+                    if (r.key().equals(transferId.toString())) {
+                        found = true;
+                        assertThat(r.value()).contains(transferId.toString());
+                    }
+                }
+                assertThat(found).as("Confirmation message for transferId=%s not found", transferId).isTrue();
+            });
+        }
     }
 }

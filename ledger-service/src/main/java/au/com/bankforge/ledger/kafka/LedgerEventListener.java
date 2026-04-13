@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.annotation.RetryableTopic;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -26,6 +27,7 @@ public class LedgerEventListener {
 
     private final LedgerEntryRepository ledgerEntryRepository;
     private final ObjectMapper objectMapper;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
     @RetryableTopic(
         attempts = "4",
@@ -82,6 +84,10 @@ public class LedgerEventListener {
         ledgerEntryRepository.save(credit);
 
         log.info("Ledger entries written: transferId={} debit={} credit={}", transferId, debit.getId(), credit.getId());
+
+        String confirmPayload = "{\"transferId\":\"" + transferId + "\",\"status\":\"CONFIRMED\"}";
+        kafkaTemplate.send("banking.transfer.confirmed", transferId.toString(), confirmPayload);
+        log.info("Published confirmation event: transferId={}", transferId);
     }
 
     @DltHandler
