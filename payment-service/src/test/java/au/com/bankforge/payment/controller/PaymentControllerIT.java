@@ -64,6 +64,7 @@ class PaymentControllerIT {
         registry.add("spring.datasource.password", postgres::getPassword);
         registry.add("spring.data.redis.host", redis::getHost);
         registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
+        registry.add("spring.kafka.bootstrap-servers", () -> "localhost:29092");
     }
 
     @LocalServerPort
@@ -110,7 +111,7 @@ class PaymentControllerIT {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().transferId()).isNotNull();
-        assertThat(response.getBody().state()).isEqualTo("CONFIRMED");
+        assertThat(response.getBody().state()).isEqualTo("POSTING");
     }
 
     @Test
@@ -161,7 +162,7 @@ class PaymentControllerIT {
         assertThat(statusResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(statusResponse.getBody()).isNotNull();
         assertThat(statusResponse.getBody().transferId()).isEqualTo(created.transferId());
-        assertThat(statusResponse.getBody().state()).isEqualTo("CONFIRMED");
+        assertThat(statusResponse.getBody().state()).isEqualTo("POSTING");
     }
 
     @Test

@@ -23,7 +23,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static au.com.bankforge.common.enums.TransferState.CANCELLED;
-import static au.com.bankforge.common.enums.TransferState.CONFIRMED;
+import static au.com.bankforge.common.enums.TransferState.POSTING;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -59,6 +59,7 @@ class PaymentServiceTest {
         registry.add("spring.datasource.password", postgres::getPassword);
         registry.add("spring.data.redis.host", redis::getHost);
         registry.add("spring.data.redis.port", () -> redis.getMappedPort(6379));
+        registry.add("spring.kafka.bootstrap-servers", () -> "localhost:29092");
     }
 
     @Autowired
@@ -81,7 +82,7 @@ class PaymentServiceTest {
     }
 
     @Test
-    void initiateTransfer_happyPath_finalStateIsConfirmed() {
+    void initiateTransfer_happyPath_finalStateIsPosting() {
         // Arrange: mock successful account-service response
         when(accountServiceClient.executeTransfer(any(), any(), any(), any()))
                 .thenReturn(new AccountServiceClient.AccountTransferResponse(
@@ -94,14 +95,14 @@ class PaymentServiceTest {
         InitiateTransferResponse response = paymentService.initiateTransfer(request);
 
         // Assert response state
-        assertThat(response.state()).isEqualTo(CONFIRMED.name());
+        assertThat(response.state()).isEqualTo(POSTING.name());
         assertThat(response.transferId()).isNotNull();
         assertThat(response.amount()).isEqualByComparingTo(new BigDecimal("100.00"));
 
         // Assert DB state
         Optional<Transfer> dbTransfer = transferRepository.findById(response.transferId());
         assertThat(dbTransfer).isPresent();
-        assertThat(dbTransfer.get().getState()).isEqualTo(CONFIRMED);
+        assertThat(dbTransfer.get().getState()).isEqualTo(POSTING);
 
         // Verify account-service was called exactly once
         verify(accountServiceClient, times(1)).executeTransfer(any(), any(), any(), any());
@@ -168,7 +169,7 @@ class PaymentServiceTest {
 
         // Assert
         assertThat(statusResponse.transferId()).isEqualTo(initiateResponse.transferId());
-        assertThat(statusResponse.state()).isEqualTo(CONFIRMED.name());
+        assertThat(statusResponse.state()).isEqualTo(POSTING.name());
         assertThat(statusResponse.amount()).isEqualByComparingTo(new BigDecimal("100.00"));
     }
 }
