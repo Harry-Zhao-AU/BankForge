@@ -6,9 +6,13 @@ FROM maven:3.9-eclipse-temurin-21-jammy AS builder
 WORKDIR /build
 
 # Copy POMs first for dependency layer caching
+# All sibling POMs needed so Maven reactor validation passes (parent POM lists all modules)
 COPY pom.xml ./
 COPY common/pom.xml common/
+COPY account-service/pom.xml account-service/
+COPY payment-service/pom.xml payment-service/
 COPY ledger-service/pom.xml ledger-service/
+COPY notification-service/pom.xml notification-service/
 
 # Pre-fetch dependencies (cached until pom.xml changes)
 RUN mvn -B dependency:go-offline -pl ledger-service -am -Dmaven.test.skip=true || true
