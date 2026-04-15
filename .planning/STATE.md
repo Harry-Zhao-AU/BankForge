@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-04-13T12:50:00.000Z"
+last_updated: "2026-04-15T00:00:00.000Z"
 progress:
   total_phases: 6
   completed_phases: 2
@@ -150,6 +150,7 @@ Overall:  [████░░░░░░] ~35% (phases 1, 1.1, 2 complete)
 |---|-------------|------|--------|-----------|
 | 260413-vd1 | Wire event-driven POSTING→CONFIRMED saga loop | 2026-04-13 | cbd84a5 | [260413-vd1](./quick/260413-vd1-wire-event-driven-posting-confirmed/) |
 | 260415-w91 | Fix ledger-service dual-write risk: Kafka EOS + idempotency guard | 2026-04-15 | 24c9622 | [260415-w91](./quick/260415-w91-fix-ledger-service-dual-write-risk-add-k/) |
+| 260415-x5g | Add @Transactional to LedgerEventListener for atomic double-entry + 3 ITs | 2026-04-15 | 9c3593d | [260415-x5g](./quick/260415-x5g-add-transactional-back-to-ledgereventlis/) |
 
 ### Blockers
 
@@ -159,9 +160,9 @@ None currently.
 
 ## Session Continuity
 
-**Last session:** 2026-04-13T12:50:00.000Z
+**Last session:** 2026-04-15T00:00:00.000Z
 
-**Resume point:** Phase 2 complete + event-driven saga loop wired. Next: Phase 3 — Service Mesh & Auth. Run `/gsd-discuss-phase 3` or `/gsd-plan-phase 3`.
+**Resume point:** Phase 2 complete + event-driven saga loop wired + ledger @Transactional restored. Next: Phase 3 — Service Mesh & Auth. Run `/gsd-discuss-phase 3` or `/gsd-plan-phase 3`.
 
 **Context to carry forward:**
 
@@ -177,4 +178,4 @@ None currently.
 ---
 
 *State initialized: 2026-04-10*
-*Last updated: 2026-04-15 — Quick 260415-w91: ledger-service dual-write fixed (Kafka EOS + idempotency guard)*
+*Last updated: 2026-04-15 — Quick 260415-x5g: LedgerEventListener @Transactional restored + atomicity/idempotency ITs*
