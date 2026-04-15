@@ -1,8 +1,8 @@
-# Multi-stage build: JDK 21 builder + JRE 21 runtime
+# Multi-stage build: Maven+JDK 21 builder + JRE 21 runtime
 # Build context must be repo root (docker build -f account-service/Dockerfile .)
 
 # ---- Build stage ----
-FROM eclipse-temurin:21-jdk-jammy AS builder
+FROM maven:3.9-eclipse-temurin-21-jammy AS builder
 WORKDIR /build
 
 # Copy POMs first for dependency layer caching
