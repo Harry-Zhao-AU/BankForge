@@ -47,6 +47,8 @@ class LedgerEventListenerIT {
         registry.add("spring.datasource.password", postgres::getPassword);
         registry.add("spring.kafka.bootstrap-servers", kafka::getBootstrapServers);
         registry.add("spring.flyway.enabled", () -> "true");
+        registry.add("spring.kafka.producer.transaction-id-prefix", () -> "test-ledger-tx-");
+        registry.add("spring.kafka.consumer.isolation-level", () -> "read_committed");
     }
 
     @Autowired
@@ -70,7 +72,10 @@ class LedgerEventListenerIT {
             }
             """.formatted(transferId, fromAccount, toAccount);
 
-        kafkaTemplate.send("banking.transfer.events", transferId.toString(), payload);
+        kafkaTemplate.executeInTransaction(ops -> {
+            ops.send("banking.transfer.events", transferId.toString(), payload);
+            return null;
+        });
 
         await().atMost(30, TimeUnit.SECONDS).untilAsserted(() -> {
             var entries = ledgerEntryRepository.findAll().stream()
@@ -88,6 +93,7 @@ class LedgerEventListenerIT {
         consumerProps.put("auto.offset.reset", "earliest");
         consumerProps.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         consumerProps.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
+        consumerProps.put("isolation.level", "read_committed");
 
         try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(consumerProps)) {
             consumer.subscribe(Collections.singletonList("banking.transfer.confirmed"));
@@ -103,5 +109,42 @@ class LedgerEventListenerIT {
                 assertThat(found).as("Confirmation message for transferId=%s not found", transferId).isTrue();
             });
         }
+    }
+
+    @Test
+    void shouldBeIdempotentOnDuplicateDelivery() {
+        UUID transferId = UUID.randomUUID();
+        UUID fromAccount = UUID.randomUUID();
+        UUID toAccount = UUID.randomUUID();
+        String payload = """
+            {
+              "transferId": "%s",
+              "fromAccountId": "%s",
+              "toAccountId": "%s",
+              "amount": "250.0000",
+              "currency": "AUD"
+            }
+            """.formatted(transferId, fromAccount, toAccount);
+
+        // Send the same event twice to simulate duplicate delivery
+        kafkaTemplate.executeInTransaction(ops -> {
+            ops.send("banking.transfer.events", transferId.toString(), payload);
+            return null;
+        });
+        kafkaTemplate.executeInTransaction(ops -> {
+            ops.send("banking.transfer.events", transferId.toString(), payload);
+            return null;
+        });
+
+        // Wait for both messages to be processed — result must be exactly 2 entries (1 DEBIT + 1 CREDIT)
+        await().atMost(30, TimeUnit.SECONDS).untilAsserted(() -> {
+            var entries = ledgerEntryRepository.findAll().stream()
+                    .filter(e -> e.getTransferId().equals(transferId))
+                    .toList();
+            // Idempotency guard: duplicate delivery must NOT produce 4 entries
+            assertThat(entries).hasSize(2);
+            assertThat(entries).anyMatch(e -> "DEBIT".equals(e.getEntryType()));
+            assertThat(entries).anyMatch(e -> "CREDIT".equals(e.getEntryType()));
+        });
     }
 }

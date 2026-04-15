@@ -4,16 +4,12 @@ import au.com.bankforge.ledger.entity.LedgerEntry;
 import au.com.bankforge.ledger.repository.LedgerEntryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.kafka.annotation.DltHandler;
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.annotation.RetryableTopic;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
-import org.springframework.kafka.annotation.BackOff;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -29,19 +25,10 @@ public class LedgerEventListener {
     private final ObjectMapper objectMapper;
     private final KafkaTemplate<String, String> kafkaTemplate;
 
-    @RetryableTopic(
-        attempts = "4",
-        backOff = @BackOff(delay = 1000, multiplier = 2.0, maxDelay = 10000),
-        dltTopicSuffix = "-dlt",
-        autoCreateTopics = "true",
-        numPartitions = "1",
-        replicationFactor = "1"
-    )
     @KafkaListener(
         topics = "banking.transfer.events",
         groupId = "ledger-service"
     )
-    @Transactional
     public void onTransferEvent(
             @Payload String payload,
             @Header(KafkaHeaders.RECEIVED_TOPIC) String topic,
@@ -61,6 +48,15 @@ public class LedgerEventListener {
         UUID fromAccountId = UUID.fromString(fromAccountIdNode.asText());
         UUID toAccountId = UUID.fromString(toAccountIdNode.asText());
         BigDecimal amount = new BigDecimal(amountNode.asText());
+
+        // Idempotency guard — skip DB writes if entries already exist for this transferId
+        if (ledgerEntryRepository.existsByTransferId(transferId)) {
+            log.info("Ledger entries already exist for transferId={}, skipping (idempotent replay)", transferId);
+            // Still publish confirmation — the downstream consumer may not have received it
+            String confirmPayload = "{\"transferId\":\"" + transferId + "\",\"status\":\"CONFIRMED\"}";
+            kafkaTemplate.send("banking.transfer.confirmed", transferId.toString(), confirmPayload);
+            return;
+        }
 
         LedgerEntry debit = LedgerEntry.builder()
                 .transferId(transferId)
@@ -88,13 +84,6 @@ public class LedgerEventListener {
         String confirmPayload = "{\"transferId\":\"" + transferId + "\",\"status\":\"CONFIRMED\"}";
         kafkaTemplate.send("banking.transfer.confirmed", transferId.toString(), confirmPayload);
         log.info("Published confirmation event: transferId={}", transferId);
-    }
-
-    @DltHandler
-    public void handleDlt(
-            @Payload String payload,
-            @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
-        log.error("FINANCIAL EVENT DLT: topic={} payload={}", topic, payload);
     }
 
     private JsonNode parsePayload(String payload) {
