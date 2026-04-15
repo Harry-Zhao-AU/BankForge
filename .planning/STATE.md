@@ -144,6 +144,13 @@ Overall:  [████░░░░░░] ~35% (phases 1, 1.1, 2 complete)
 - [ ] Verify Prometheus Istio metric label names before writing ETL (Phase 4)
 - [ ] Pin MCP Python SDK version in `requirements.txt` before writing any tools (Phase 5)
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260413-vd1 | Wire event-driven POSTING→CONFIRMED saga loop | 2026-04-13 | cbd84a5 | [260413-vd1](./quick/260413-vd1-wire-event-driven-posting-confirmed/) |
+| 260415-w91 | Fix ledger-service dual-write risk: Kafka EOS + idempotency guard | 2026-04-15 | 24c9622 | [260415-w91](./quick/260415-w91-fix-ledger-service-dual-write-risk-add-k/) |
+
 ### Blockers
 
 None currently.
@@ -170,4 +177,4 @@ None currently.
 ---
 
 *State initialized: 2026-04-10*
-*Last updated: 2026-04-13 — Quick 260413-vd1: event-driven POSTING→CONFIRMED Saga loop wired*
+*Last updated: 2026-04-15 — Quick 260415-w91: ledger-service dual-write fixed (Kafka EOS + idempotency guard)*
