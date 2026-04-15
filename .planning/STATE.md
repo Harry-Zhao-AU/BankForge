@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-04-13T12:50:00.000Z"
+last_updated: "2026-04-15T00:00:00.000Z"
 progress:
-  total_phases: 6
-  completed_phases: 2
-  total_plans: 10
-  completed_plans: 7
-  percent: 35
+  total_phases: 7
+  completed_phases: 3
+  total_plans: 12
+  completed_plans: 10
+  percent: 40
 ---
 
 # State: BankForge
@@ -22,7 +22,7 @@ progress:
 
 **Core Value:** A running, end-to-end system where every enterprise pattern (ACID, Saga, Outbox, mTLS, distributed tracing) is implemented and queryable via AI agent — proving the patterns work together, not just in theory.
 
-**Current Focus:** Phase 3 — Service Mesh & Auth (next up)
+**Current Focus:** Phase 2.1 — CI/CD Foundation (planned, ready to execute)
 
 **Total Phases:** 6
 
@@ -30,17 +30,17 @@ progress:
 
 ## Current Position
 
-Phase: 2 (observability) — COMPLETE
+Phase: 2.1 (ci-cd-foundation) — PLANNED
 | Field | Value |
 |-------|-------|
-| Phase | 2 — Observability |
-| Plan | 02-01 COMPLETE; 02-02 COMPLETE; 02-03 COMPLETE |
-| Status | Phase 2 complete — ready for Phase 3 |
-| Phase progress | 100% (3/3 plans) |
+| Phase | 2.1 — CI/CD Foundation |
+| Plan | 02.1-01 PLANNED; 02.1-02 PLANNED |
+| Status | Plans complete — ready to execute `/gsd-execute-phase 2.1` |
+| Phase progress | 0% (0/2 plans) |
 
 ```
-Progress: Phase 2 [██████████] 100%
-Overall:  [████░░░░░░] ~35% (phases 1, 1.1, 2 complete)
+Progress: Phase 2.1 [░░░░░░░░░░] 0% (planned)
+Overall:  [████░░░░░░] ~40% (phases 1, 1.1, 2 complete)
 ```
 
 ---
@@ -52,6 +52,7 @@ Overall:  [████░░░░░░] ~35% (phases 1, 1.1, 2 complete)
 | 1 | Service Scaffold + Core Banking | COMPLETE | 4/4 | 2026-04-10 |
 | 1.1 | CDC Pipeline + Compliance + Kind Spike | COMPLETE | 3/3 | 2026-04-11 |
 | 2 | Observability | COMPLETE | 3/3 | 2026-04-13 |
+| 2.1 | CI/CD Foundation | Planned | 0/2 | - |
 | 3 | Service Mesh & Auth | Not started | TBD | - |
 | 4 | Graph & RCA Foundation | Not started | TBD | - |
 | 5 | AI Integration / MCP | Not started | TBD | - |
@@ -134,6 +135,7 @@ Overall:  [████░░░░░░] ~35% (phases 1, 1.1, 2 complete)
 ### Roadmap Evolution
 
 - Phase 1.1 inserted after Phase 1: CDC Pipeline + Compliance + Kind Spike (INSERTED) — Phase 1 was too broad for a single research+plan cycle; split at the application/infrastructure boundary. Phase 1 = service scaffold + core banking (CORE-01..03, TXNS-01, TXNS-04..05). Phase 1.1 = Kafka KRaft + Debezium CDC + DLT + AUSTRAC + kind spike (CORE-04..05, TXNS-02..03, AUBN-01..02).
+- Phase 2.1 inserted after Phase 2: CI/CD Foundation (URGENT) — GitHub Actions CI pipeline (build all 4 services in parallel, test, push to ghcr.io) + self-hosted runner setup. CI-only phase; no Kubernetes. Inserted to provide quality gates for Phases 3–5 before service mesh work begins.
 
 ### Todos
 
@@ -152,9 +154,9 @@ None currently.
 
 ## Session Continuity
 
-**Last session:** 2026-04-13T12:50:00.000Z
+**Last session:** 2026-04-15T00:00:00.000Z
 
-**Resume point:** Phase 2 complete + event-driven saga loop wired. Next: Phase 3 — Service Mesh & Auth. Run `/gsd-discuss-phase 3` or `/gsd-plan-phase 3`.
+**Resume point:** Phase 2.1 planned — 2 plans ready. Run `/gsd-execute-phase 2.1` to execute. Plan 01 (DOCKER_HOST Maven profile fix) runs autonomously. Plan 02 (ci.yml + Dockerfiles) has a human-verify checkpoint.
 
 **Context to carry forward:**
 
@@ -170,4 +172,4 @@ None currently.
 ---
 
 *State initialized: 2026-04-10*
-*Last updated: 2026-04-13 — Quick 260413-vd1: event-driven POSTING→CONFIRMED Saga loop wired*
+*Last updated: 2026-04-15 — Phase 2.1 CI/CD Foundation: discussed, researched, and planned (2 plans)*
