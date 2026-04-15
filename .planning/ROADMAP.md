@@ -11,6 +11,7 @@
 - [x] **Phase 1: Service Scaffold + Core Banking** — Four Spring Boot services on Podman Compose with ACID money movement, BSB validation, transfer state machine (enum FSM), and Redis idempotency. Outbox table written but CDC not yet consumed. (completed 2026-04-10)
 - [ ] **Phase 1.1: CDC Pipeline + Compliance + Kind Spike** — Kafka KRaft + Debezium CDC consuming the outbox, DLT topics, AUSTRAC threshold audit logging, and a Podman + kind networking validation spike.
 - [ ] **Phase 2: Observability** — Full observability stack (OTel Collector, Jaeger, Prometheus, Loki, Grafana) added to Compose, proving distributed traces and metrics before Kubernetes migration.
+- [ ] **Phase 02.1: CI/CD Foundation** — GitHub Actions CI pipeline: build all 4 services in parallel, run full test suite, push OCI images to ghcr.io. Quality gate for Phases 3-5.
 - [ ] **Phase 3: Service Mesh & Auth** — Full cut-over to a kind Kubernetes cluster with Istio mTLS STRICT, Kong API gateway, and Keycloak JWT issuance. Kiali live traffic graph operational.
 - [ ] **Phase 4: Graph & RCA Foundation** — Neo4j service graph populated via Prometheus/Istio ETL every 30 seconds, with Cypher queries that identify bottleneck services.
 - [ ] **Phase 5: AI Integration / MCP** — Python MCP server exposing banking operations and observability as tools to Claude Desktop, with autonomous end-to-end RCA demo.
@@ -97,6 +98,33 @@ Plans:
 
 ---
 
+### Phase 02.1: CI/CD Foundation (INSERTED)
+
+**Goal:** GitHub Actions CI pipeline that builds all 4 Spring Boot services in parallel, runs the full test suite (unit + integration via Testcontainers), and pushes OCI images to ghcr.io on master-branch merges — providing a quality gate for Phases 3-5.
+
+**Depends on:** Phase 2
+
+**Requirements**: CI-01, CI-02, CI-03, CI-04, CI-05, CI-06, CI-07
+
+**Critical constraints:**
+- DOCKER_HOST Surefire env var must be moved into an OS-conditional Maven profile (Windows only) — unconditional setting breaks Testcontainers on ubuntu-latest
+- Integration tests use `*IT.java` naming under Surefire (not Failsafe) — Maven command is `mvn -B test`, NOT `mvn verify`
+- `common` module must be built and cached before parallel service jobs run
+- Image push gated to master branch only — PRs get build+test without push
+
+**Success Criteria** (what must be TRUE):
+  1. A push to master triggers CI: build-common runs first, then 4 parallel service jobs each run `mvn -B test` and push images to ghcr.io
+  2. All 4 matrix jobs pass on ubuntu-latest (Testcontainers works without DOCKER_HOST override)
+  3. Each service image in ghcr.io is tagged with both `latest` and `sha-XXXXXXX` (immutable short SHA)
+  4. A pull request triggers build+test only — no image push occurs
+  5. Local Windows `mvn test` still works (podman-windows Maven profile auto-activates)
+
+**Plans:** 2 plans
+
+Plans:
+- [ ] 02.1-01-PLAN.md — Maven DOCKER_HOST profile fix: move Podman env vars into OS-conditional profile in all 4 service POMs
+- [ ] 02.1-02-PLAN.md — CI infrastructure: GitHub Actions workflow (ci.yml) + 4 multi-stage Dockerfiles + human verification
+
 ### Phase 3: Service Mesh & Auth
 
 **Goal**: All services run inside a kind Kubernetes cluster behind Istio mTLS and Kong JWT auth — no service handles auth code and no plaintext pod-to-pod traffic exists
@@ -178,6 +206,7 @@ Plans:
 | 1. Service Scaffold + Core Banking | 4/4 | Complete   | 2026-04-10 |
 | 1.1. CDC Pipeline + Compliance | 0/? | Not started | - |
 | 2. Observability | 0/3 | Planned | - |
+| 02.1. CI/CD Foundation | 0/2 | Planned | - |
 | 3. Service Mesh & Auth | 0/? | Not started | - |
 | 4. Graph & RCA Foundation | 0/? | Not started | - |
 | 5. AI Integration / MCP | 0/? | Not started | - |
@@ -205,6 +234,13 @@ Plans:
 | OBS-03 | Phase 2 | Observability |
 | OBS-04 | Phase 2 | Observability |
 | OBS-05 | Phase 2 | Observability |
+| CI-01 | Phase 02.1 | CI/CD |
+| CI-02 | Phase 02.1 | CI/CD |
+| CI-03 | Phase 02.1 | CI/CD |
+| CI-04 | Phase 02.1 | CI/CD |
+| CI-05 | Phase 02.1 | CI/CD |
+| CI-06 | Phase 02.1 | CI/CD |
+| CI-07 | Phase 02.1 | CI/CD |
 | MESH-01 | Phase 3 | Service Mesh & Auth |
 | MESH-02 | Phase 3 | Service Mesh & Auth |
 | MESH-03 | Phase 3 | Service Mesh & Auth |
@@ -224,9 +260,9 @@ Plans:
 | MCP-07 | Phase 5 | AI Integration / MCP |
 | MCP-08 | Phase 5 | AI Integration / MCP |
 
-**Mapped: 34/34 v1 requirements — no orphans**
+**Mapped: 41/41 requirements (34 v1 + 7 CI) — no orphans**
 
 ---
 
 *Roadmap created: 2026-04-10*
-*Last updated: 2026-04-12 after Phase 2 planning*
+*Last updated: 2026-04-15 after Phase 02.1 planning*
