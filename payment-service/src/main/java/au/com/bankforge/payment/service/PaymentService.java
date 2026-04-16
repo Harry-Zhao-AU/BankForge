@@ -10,6 +10,8 @@ import au.com.bankforge.payment.repository.TransferRepository;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import io.opentelemetry.api.baggage.Baggage;
+import io.opentelemetry.context.Scope;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -125,55 +127,65 @@ public class PaymentService {
                 return buildAndCacheResponse(transfer, request.idempotencyKey());
             }
 
-            incrementTransferInitiated(TransferState.PENDING);
-            log.atInfo().addKeyValue("transferId", transfer.getId()).log("Transfer initiated");
+            // D-15 Layer 2: Set OTel Baggage so all downstream spans carry the transaction ID.
+            // Set after createAndStart() so transfer.getId() is available.
+            // Not set on idempotency early-return paths (Redis hit, DataIntegrityViolationException)
+            // — those are replays where the original execution already set baggage.
+            Baggage baggage = Baggage.current().toBuilder()
+                    .put("banking.transaction.id", transfer.getId().toString())
+                    .build();
+            try (Scope scope = baggage.makeCurrent()) {
 
-            // Step 3: ACID transfer in account-service — outside any transaction.
-            // Track whether the call returned successfully so we know whether to attempt reversal.
-            boolean transferExecuted = false;
-            try {
-                accountServiceClient.executeTransfer(
-                        request.fromAccountId(), request.toAccountId(),
-                        request.amount(), request.description());
-                transferExecuted = true;
+                incrementTransferInitiated(TransferState.PENDING);
+                log.atInfo().addKeyValue("transferId", transfer.getId()).log("Transfer initiated");
 
-                // Step 4: PAYMENT_PROCESSING → PAYMENT_DONE → POSTING (ledger confirms async via Kafka)
-                transfer = transferStateService.advanceToPosting(transfer.getId());
-                incrementTransferInitiated(TransferState.POSTING);
-                transferAmountCounter.increment(request.amount().doubleValue());
+                // Step 3: ACID transfer in account-service — outside any transaction.
+                // Track whether the call returned successfully so we know whether to attempt reversal.
+                boolean transferExecuted = false;
+                try {
+                    accountServiceClient.executeTransfer(
+                            request.fromAccountId(), request.toAccountId(),
+                            request.amount(), request.description());
+                    transferExecuted = true;
 
-            } catch (Exception e) {
-                log.error("Transfer {} failed: {}", transfer.getId(), e.getMessage());
+                    // Step 4: PAYMENT_PROCESSING → PAYMENT_DONE → POSTING (ledger confirms async via Kafka)
+                    transfer = transferStateService.advanceToPosting(transfer.getId());
+                    incrementTransferInitiated(TransferState.POSTING);
+                    transferAmountCounter.increment(request.amount().doubleValue());
 
-                // Step 5a: Best-effort reversal — only attempted if executeTransfer() returned
-                // successfully (transferExecuted = true), meaning money definitely moved.
-                // If executeTransfer() itself threw, the outcome is uncertain (network timeout
-                // may mean money did or did not move); in that case we do NOT attempt reversal
-                // to avoid a double-move. An alert/manual review is required for those cases.
-                if (transferExecuted) {
-                    try {
-                        accountServiceClient.reverseTransfer(
-                                request.fromAccountId(), request.toAccountId(),
-                                request.amount(),
-                                "Reversal of failed transfer " + transfer.getId());
-                        log.info("Reversal succeeded for transfer {}", transfer.getId());
-                    } catch (Exception reverseEx) {
-                        log.error("CRITICAL: Reversal failed for transfer {} — manual intervention required. Cause: {}",
-                                transfer.getId(), reverseEx.getMessage());
+                } catch (Exception e) {
+                    log.error("Transfer {} failed: {}", transfer.getId(), e.getMessage());
+
+                    // Step 5a: Best-effort reversal — only attempted if executeTransfer() returned
+                    // successfully (transferExecuted = true), meaning money definitely moved.
+                    // If executeTransfer() itself threw, the outcome is uncertain (network timeout
+                    // may mean money did or did not move); in that case we do NOT attempt reversal
+                    // to avoid a double-move. An alert/manual review is required for those cases.
+                    if (transferExecuted) {
+                        try {
+                            accountServiceClient.reverseTransfer(
+                                    request.fromAccountId(), request.toAccountId(),
+                                    request.amount(),
+                                    "Reversal of failed transfer " + transfer.getId());
+                            log.info("Reversal succeeded for transfer {}", transfer.getId());
+                        } catch (Exception reverseEx) {
+                            log.error("CRITICAL: Reversal failed for transfer {} — manual intervention required. Cause: {}",
+                                    transfer.getId(), reverseEx.getMessage());
+                        }
                     }
+
+                    // Step 5b: FAIL → COMPENSATING → CANCELLED in a fresh isolated transaction.
+                    // REQUIRES_NEW in cancel() guarantees this commits even if any prior context
+                    // was marked rollback-only.
+                    transfer = transferStateService.cancel(transfer.getId(), e.getMessage());
+                    incrementTransferInitiated(TransferState.CANCELLED);
                 }
 
-                // Step 5b: FAIL → COMPENSATING → CANCELLED in a fresh isolated transaction.
-                // REQUIRES_NEW in cancel() guarantees this commits even if any prior context
-                // was marked rollback-only.
-                transfer = transferStateService.cancel(transfer.getId(), e.getMessage());
-                incrementTransferInitiated(TransferState.CANCELLED);
+                // Step 6: Cache response in Redis for future idempotent replays (TXNS-05).
+                // Cached regardless of outcome — CANCELLED responses are intentionally cached so
+                // retries with the same idempotency key return the same result without re-executing.
+                return buildAndCacheResponse(transfer, request.idempotencyKey());
             }
-
-            // Step 6: Cache response in Redis for future idempotent replays (TXNS-05).
-            // Cached regardless of outcome — CANCELLED responses are intentionally cached so
-            // retries with the same idempotency key return the same result without re-executing.
-            return buildAndCacheResponse(transfer, request.idempotencyKey());
         });
     }
 
