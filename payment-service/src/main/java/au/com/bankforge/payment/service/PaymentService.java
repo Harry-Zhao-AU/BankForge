@@ -11,6 +11,7 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.opentelemetry.api.baggage.Baggage;
+import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Scope;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -131,6 +132,7 @@ public class PaymentService {
             // Set after createAndStart() so transfer.getId() is available.
             // Not set on idempotency early-return paths (Redis hit, DataIntegrityViolationException)
             // — those are replays where the original execution already set baggage.
+            Span.current().setAttribute("banking.transaction.id", transfer.getId().toString());
             Baggage baggage = Baggage.current().toBuilder()
                     .put("banking.transaction.id", transfer.getId().toString())
                     .build();

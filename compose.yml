@@ -163,7 +163,8 @@ services:
 
   account-service:
     build:
-      context: ./account-service
+      context: .
+      dockerfile: account-service/Dockerfile
     depends_on:
       account-db:
         condition: service_healthy
@@ -181,7 +182,8 @@ services:
 
   payment-service:
     build:
-      context: ./payment-service
+      context: .
+      dockerfile: payment-service/Dockerfile
     depends_on:
       payment-db:
         condition: service_healthy
@@ -203,7 +205,8 @@ services:
 
   ledger-service:
     build:
-      context: ./ledger-service
+      context: .
+      dockerfile: ledger-service/Dockerfile
     depends_on:
       ledger-db:
         condition: service_healthy
@@ -224,7 +227,8 @@ services:
 
   notification-service:
     build:
-      context: ./notification-service
+      context: .
+      dockerfile: notification-service/Dockerfile
     depends_on:
       kafka:
         condition: service_healthy

@@ -5,6 +5,7 @@ import au.com.bankforge.ledger.entity.LedgerOutboxEvent;
 import au.com.bankforge.ledger.repository.LedgerEntryRepository;
 import au.com.bankforge.ledger.repository.LedgerOutboxEventRepository;
 import io.opentelemetry.api.baggage.Baggage;
+import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Scope;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,7 +62,8 @@ public class LedgerEventListener {
             return;
         }
 
-        // D-15, D-16: Set OTel Baggage so all downstream spans carry the transaction ID
+        // D-15, D-16: setAttribute makes it searchable in Jaeger; Baggage propagates downstream
+        Span.current().setAttribute("banking.transaction.id", transferId.toString());
         Baggage baggage = Baggage.current().toBuilder()
                 .put("banking.transaction.id", transferId.toString())
                 .build();
