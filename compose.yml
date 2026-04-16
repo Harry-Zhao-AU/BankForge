@@ -138,6 +138,8 @@ services:
         condition: service_healthy
       account-db:
         condition: service_healthy
+      ledger-db:
+        condition: service_healthy
     environment:
       BOOTSTRAP_SERVERS: kafka:9092
       GROUP_ID: 1
