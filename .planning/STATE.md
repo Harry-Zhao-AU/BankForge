@@ -151,6 +151,7 @@ Overall:  [████░░░░░░] ~35% (phases 1, 1.1, 2 complete)
 | 260413-vd1 | Wire event-driven POSTING→CONFIRMED saga loop | 2026-04-13 | cbd84a5 | [260413-vd1](./quick/260413-vd1-wire-event-driven-posting-confirmed/) |
 | 260415-w91 | Fix ledger-service dual-write risk: Kafka EOS + idempotency guard | 2026-04-15 | 24c9622 | [260415-w91](./quick/260415-w91-fix-ledger-service-dual-write-risk-add-k/) |
 | 260415-x5g | Add @Transactional to LedgerEventListener for atomic double-entry + 3 ITs | 2026-04-15 | 9c3593d | [260415-x5g](./quick/260415-x5g-add-transactional-back-to-ledgereventlis/) |
+| 260416-u6y | add the metric for all states, so I can see the transfer state in grafana without querying the db | 2026-04-16 | 7995b13 | [260416-u6y](./quick/260416-u6y-add-the-metric-for-all-states-so-i-can-s/) |
 
 ### Blockers
 
@@ -178,4 +179,4 @@ None currently.
 ---
 
 *State initialized: 2026-04-10*
-*Last updated: 2026-04-15 — Quick 260415-x5g: LedgerEventListener @Transactional restored + atomicity/idempotency ITs*
+*Last updated: 2026-04-16 — Quick 260416-u6y: add transfer_initiated_total metrics for all states (CONFIRMED, FAILED, CANCELLED paths)*
