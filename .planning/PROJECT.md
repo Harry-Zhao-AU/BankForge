@@ -12,7 +12,8 @@ A running, end-to-end system where every enterprise pattern (ACID, Saga, Outbox,
 
 ### Validated
 
-(None yet — ship to validate)
+- [x] Local ACID transactions for money movement (debit + credit + outbox in one TX) — Validated in Phase 01.2: outbox row written in same `@Transactional` as ledger entries; no dual-write
+- [x] Outbox + Debezium CDC for reliable event delivery (no dual-write) — Validated in Phase 01.2: `LedgerEventListener` writes outbox row only; Debezium publishes to `banking.transfer.confirmed`; DLT wired for exhausted retries
 
 ### Active
 
@@ -56,8 +57,8 @@ A running, end-to-end system where every enterprise pattern (ACID, Saga, Outbox,
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Local ACID TX for transfers (not distributed saga) | Money movement must be atomic — partial debit/credit is unacceptable | — Pending |
-| Outbox + Debezium CDC instead of direct Kafka publish | Eliminates dual-write problem; guaranteed at-least-once delivery | — Pending |
+| Local ACID TX for transfers (not distributed saga) | Money movement must be atomic — partial debit/credit is unacceptable | ✓ Validated Phase 01.2 |
+| Outbox + Debezium CDC instead of direct Kafka publish | Eliminates dual-write problem; guaranteed at-least-once delivery | ✓ Validated Phase 01.2 |
 | Neo4j for service graph (not just Prometheus) | Cypher queries enable relationship traversal for RCA that PromQL can't express | — Pending |
 | MCP server in Python (not Java) | Lighter footprint; Python MCP SDK is mature; AI tooling ecosystem | — Pending |
 | Kong external + Istio internal (two-layer mesh) | Kong handles external auth/rate-limiting; Istio handles internal mTLS — services need zero auth code | — Pending |
@@ -80,4 +81,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-10 after initialization*
+*Last updated: 2026-04-16 after Phase 01.2 completion — CDC outbox validated*
