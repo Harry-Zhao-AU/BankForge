@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: in_progress
-last_updated: "2026-04-15T00:00:00.000Z"
+status: unknown
+last_updated: "2026-04-16T10:09:49.853Z"
 progress:
-  total_phases: 6
-  completed_phases: 2
+  total_phases: 7
+  completed_phases: 3
   total_plans: 10
-  completed_plans: 7
-  percent: 35
+  completed_plans: 10
+  percent: 100
 ---
 
 # State: BankForge
@@ -134,6 +134,7 @@ Overall:  [████░░░░░░] ~35% (phases 1, 1.1, 2 complete)
 ### Roadmap Evolution
 
 - Phase 1.1 inserted after Phase 1: CDC Pipeline + Compliance + Kind Spike (INSERTED) — Phase 1 was too broad for a single research+plan cycle; split at the application/infrastructure boundary. Phase 1 = service scaffold + core banking (CORE-01..03, TXNS-01, TXNS-04..05). Phase 1.1 = Kafka KRaft + Debezium CDC + DLT + AUSTRAC + kind spike (CORE-04..05, TXNS-02..03, AUBN-01..02).
+- Phase 1.2 inserted after Phase 1.1: CDC + Outbox for ledger-service, Idempotency / Anti-Hanging / Out-of-Order Compensation Analysis, introduce transactionId across the entire flow (URGENT) — gap discovered during Phase 1.1 execution; ledger-service CDC wiring, saga resilience patterns, and traceparent propagation are pre-requisites for Phase 2 observability goals.
 
 ### Todos
 
@@ -160,7 +161,7 @@ None currently.
 
 ## Session Continuity
 
-**Last session:** 2026-04-15T00:00:00.000Z
+**Last session:** 2026-04-16T10:09:49.813Z
 
 **Resume point:** Phase 2 complete + event-driven saga loop wired + ledger @Transactional restored. Next: Phase 3 — Service Mesh & Auth. Run `/gsd-discuss-phase 3` or `/gsd-plan-phase 3`.
 
