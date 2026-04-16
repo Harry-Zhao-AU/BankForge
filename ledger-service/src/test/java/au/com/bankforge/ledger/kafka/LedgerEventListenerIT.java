@@ -2,11 +2,8 @@ package au.com.bankforge.ledger.kafka;
 
 import au.com.bankforge.ledger.entity.LedgerEntry;
 import au.com.bankforge.ledger.repository.LedgerEntryRepository;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
+import au.com.bankforge.ledger.repository.LedgerOutboxEventRepository;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -19,9 +16,6 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
-import java.time.Duration;
-import java.util.Collections;
-import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -54,8 +48,11 @@ class LedgerEventListenerIT {
         registry.add("spring.datasource.password", postgres::getPassword);
         registry.add("spring.kafka.bootstrap-servers", kafka::getBootstrapServers);
         registry.add("spring.flyway.enabled", () -> "true");
-        registry.add("spring.kafka.producer.transaction-id-prefix", () -> "test-ledger-tx-");
-        registry.add("spring.kafka.consumer.isolation-level", () -> "read_committed");
+        // EOS properties removed (RESEARCH Pitfall 2, 3):
+        // Do NOT add spring.kafka.producer.transaction-id-prefix — makes KafkaTemplate transactional,
+        // which breaks DeadLetterPublishingRecoverer (requires non-transactional template).
+        // Do NOT add spring.kafka.consumer.isolation-level — read_uncommitted is correct for
+        // Debezium-sourced events after EOS removal.
     }
 
     @Autowired
@@ -63,6 +60,9 @@ class LedgerEventListenerIT {
 
     @MockitoSpyBean
     private LedgerEntryRepository spiedLedgerEntryRepository;
+
+    @Autowired
+    private LedgerOutboxEventRepository ledgerOutboxEventRepository;
 
     @Autowired
     private LedgerEventListener listener;
@@ -82,10 +82,8 @@ class LedgerEventListenerIT {
             }
             """.formatted(transferId, fromAccount, toAccount);
 
-        kafkaTemplate.executeInTransaction(ops -> {
-            ops.send("banking.transfer.events", transferId.toString(), payload);
-            return null;
-        });
+        // Non-transactional send — matching the post-EOS refactored application config
+        kafkaTemplate.send("banking.transfer.events", transferId.toString(), payload);
 
         await().atMost(30, TimeUnit.SECONDS).untilAsserted(() -> {
             var entries = spiedLedgerEntryRepository.findAll().stream()
@@ -96,29 +94,14 @@ class LedgerEventListenerIT {
             assertThat(entries).anyMatch(e -> "CREDIT".equals(e.getEntryType()));
         });
 
-        // Also verify that banking.transfer.confirmed was published by LedgerEventListener
-        Properties consumerProps = new Properties();
-        consumerProps.put("bootstrap.servers", kafka.getBootstrapServers());
-        consumerProps.put("group.id", "it-verifier-" + UUID.randomUUID());
-        consumerProps.put("auto.offset.reset", "earliest");
-        consumerProps.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-        consumerProps.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-        consumerProps.put("isolation.level", "read_committed");
-
-        try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(consumerProps)) {
-            consumer.subscribe(Collections.singletonList("banking.transfer.confirmed"));
-            await().atMost(15, TimeUnit.SECONDS).untilAsserted(() -> {
-                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(500));
-                boolean found = false;
-                for (ConsumerRecord<String, String> r : records) {
-                    if (r.key().equals(transferId.toString())) {
-                        found = true;
-                        assertThat(r.value()).contains(transferId.toString());
-                    }
-                }
-                assertThat(found).as("Confirmation message for transferId=%s not found", transferId).isTrue();
-            });
-        }
+        // Verify outbox row written — replaces direct Kafka confirmation check.
+        // LedgerEventListener no longer publishes directly to Kafka; it writes an outbox row.
+        // Debezium CDC publishes banking.transfer.confirmed from the outbox table in production.
+        var outboxRows = ledgerOutboxEventRepository.findAll().stream()
+                .filter(o -> transferId.toString().equals(o.getAggregateid()))
+                .toList();
+        assertThat(outboxRows).hasSize(1);
+        assertThat(outboxRows.getFirst().getAggregatetype()).isEqualTo("transfer-confirmation");
     }
 
     @Test
@@ -137,14 +120,8 @@ class LedgerEventListenerIT {
             """.formatted(transferId, fromAccount, toAccount);
 
         // Send the same event twice to simulate duplicate delivery
-        kafkaTemplate.executeInTransaction(ops -> {
-            ops.send("banking.transfer.events", transferId.toString(), payload);
-            return null;
-        });
-        kafkaTemplate.executeInTransaction(ops -> {
-            ops.send("banking.transfer.events", transferId.toString(), payload);
-            return null;
-        });
+        kafkaTemplate.send("banking.transfer.events", transferId.toString(), payload);
+        kafkaTemplate.send("banking.transfer.events", transferId.toString(), payload);
 
         // Wait for both messages to be processed — result must be exactly 2 entries (1 DEBIT + 1 CREDIT)
         await().atMost(30, TimeUnit.SECONDS).untilAsserted(() -> {
@@ -183,10 +160,8 @@ class LedgerEventListenerIT {
         }).when(spiedLedgerEntryRepository).save(any(LedgerEntry.class));
 
         try {
-            kafkaTemplate.executeInTransaction(ops -> {
-                ops.send("banking.transfer.events", transferId.toString(), payload);
-                return null;
-            });
+            // Non-transactional send — matching the post-EOS refactored application config
+            kafkaTemplate.send("banking.transfer.events", transferId.toString(), payload);
 
             // Wait long enough for the message to be consumed, error handler to exhaust retries
             // DefaultErrorHandler ExponentialBackOff(1000, 2.0) maxElapsed=30s
@@ -215,11 +190,8 @@ class LedgerEventListenerIT {
             }
             """.formatted(transferId, fromAccount, toAccount);
 
-        // First delivery — normal processing, entries written + confirmation published
-        kafkaTemplate.executeInTransaction(ops -> {
-            ops.send("banking.transfer.events", transferId.toString(), payload);
-            return null;
-        });
+        // First delivery — normal processing, entries written + outbox row written
+        kafkaTemplate.send("banking.transfer.events", transferId.toString(), payload);
 
         await().atMost(30, TimeUnit.SECONDS).untilAsserted(() -> {
             var entries = spiedLedgerEntryRepository.findByTransferId(transferId);
