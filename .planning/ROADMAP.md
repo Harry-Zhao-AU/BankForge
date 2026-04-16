@@ -10,6 +10,7 @@
 
 - [x] **Phase 1: Service Scaffold + Core Banking** — Four Spring Boot services on Podman Compose with ACID money movement, BSB validation, transfer state machine (enum FSM), and Redis idempotency. Outbox table written but CDC not yet consumed. (completed 2026-04-10)
 - [ ] **Phase 1.1: CDC Pipeline + Compliance + Kind Spike** — Kafka KRaft + Debezium CDC consuming the outbox, DLT topics, AUSTRAC threshold audit logging, and a Podman + kind networking validation spike.
+- [ ] **Phase 01.2: CDC + Outbox for Ledger Service, Resilience, TransactionId** — Ledger-service outbox pattern, DLT wiring, hung-transfer detection, OTel Baggage transactionId propagation, end-to-end Saga integration tests.
 - [ ] **Phase 2: Observability** — Full observability stack (OTel Collector, Jaeger, Prometheus, Loki, Grafana) added to Compose, proving distributed traces and metrics before Kubernetes migration.
 - [ ] **Phase 3: Service Mesh & Auth** — Full cut-over to a kind Kubernetes cluster with Istio mTLS STRICT, Kong API gateway, and Keycloak JWT issuance. Kiali live traffic graph operational.
 - [ ] **Phase 4: Graph & RCA Foundation** — Neo4j service graph populated via Prometheus/Istio ETL every 30 seconds, with Cypher queries that identify bottleneck services.
@@ -46,6 +47,41 @@ Plans:
 - [x] 01-02-PLAN.md — account-service: ACID banking core with Flyway migrations, PESSIMISTIC_WRITE transfers, outbox table, integration tests
 - [x] 01-03-PLAN.md — payment-service: Transfer orchestration with state machine, Redis idempotency, RestClient to account-service, tests
 - [x] 01-04-PLAN.md — Stub services (ledger + notification), Compose build and startup, end-to-end human verification
+
+---
+
+### Phase 01.2: CDC + Outbox for Ledger Service, Resilience, TransactionId (INSERTED)
+
+**Goal**: Ledger-service publishes transfer confirmations via Debezium CDC outbox pattern (eliminating dual-write), exhausted-retry messages are captured in DLT (no silent loss), hung transfers are detected and resolved per-state, and transferId is observable across Kafka headers, OTel Baggage, and HTTP response headers.
+
+**Depends on:** Phase 1, Phase 1.1
+
+**Requirements**: CORE-04, TXNS-02, TXNS-03
+
+**Critical constraints:**
+- `kafkaTemplate.send()` must be completely removed from LedgerEventListener — Debezium CDC handles all outbox publishing
+- `KafkaTransactionManager` and `EOSMode.V2` must be removed from ledger-service KafkaConfig
+- `transaction-id-prefix` and `isolation-level: read_committed` must be removed from ledger-service application.yml
+- POSTING timeout must NOT trigger balance reversal — ledger entries are balanced, only confirmation is missing
+- Debezium `route.topic.replacement` must use literal `banking.transfer.confirmed` (not `${routedByValue}`)
+- `FAILED` state added to TransferState enum is set directly by scheduler (FSM bypass), not via state machine transition
+
+**Success Criteria** (what must be TRUE):
+  1. LedgerEventListener writes debit entry + credit entry + outbox row in a single JPA transaction with no direct Kafka publish
+  2. Duplicate event delivery produces exactly 2 ledger entries and exactly 1 outbox row (idempotency verified)
+  3. A poison pill payload routes to `banking.transfer.events.DLT` after retry exhaustion with full metadata headers
+  4. Hung PAYMENT_PROCESSING transfers (>5 min) are auto-cancelled with `banking.transfer.failed` event published
+  5. Hung POSTING transfers (>15 min) are marked FAILED with error message, no reversal event published
+  6. `X-Transaction-Id` header is returned in payment-service POST /transfer response
+  7. OTel Baggage carries `banking.transaction.id` through distributed traces
+
+**Plans:** 4 plans
+
+Plans:
+- [ ] 01.2-01-PLAN.md — Foundation: FAILED state enum, outbox Flyway migration, LedgerOutboxEvent entity/repository, Debezium connector, infra wiring
+- [ ] 01.2-02-PLAN.md — Listener refactor: outbox pattern, KafkaConfig cleanup, DLT wiring, OTel Baggage, X-Transaction-Id header
+- [ ] 01.2-03-PLAN.md — Hung-transfer detector: @Scheduled job, per-state timeout rules, unit tests
+- [ ] 01.2-04-PLAN.md — Integration tests: TransferSagaIT (3 scenarios), LedgerEventListenerIT update
 
 ---
 
@@ -177,6 +213,7 @@ Plans:
 |-------|----------------|--------|-----------|
 | 1. Service Scaffold + Core Banking | 4/4 | Complete   | 2026-04-10 |
 | 1.1. CDC Pipeline + Compliance | 0/? | Not started | - |
+| 01.2. CDC + Outbox Ledger Resilience | 0/4 | Planned | - |
 | 2. Observability | 0/3 | Planned | - |
 | 3. Service Mesh & Auth | 0/? | Not started | - |
 | 4. Graph & RCA Foundation | 0/? | Not started | - |
@@ -191,11 +228,11 @@ Plans:
 | CORE-01 | Phase 1 | Core Services |
 | CORE-02 | Phase 1 | Core Services |
 | CORE-03 | Phase 1 | Core Services |
-| CORE-04 | Phase 1.1 | Core Services |
+| CORE-04 | Phase 1.1 / Phase 01.2 | Core Services |
 | CORE-05 | Phase 1.1 | Core Services |
 | TXNS-01 | Phase 1 | Transaction Patterns |
-| TXNS-02 | Phase 1.1 | Transaction Patterns |
-| TXNS-03 | Phase 1.1 | Transaction Patterns |
+| TXNS-02 | Phase 1.1 / Phase 01.2 | Transaction Patterns |
+| TXNS-03 | Phase 1.1 / Phase 01.2 | Transaction Patterns |
 | TXNS-04 | Phase 1 | Transaction Patterns |
 | TXNS-05 | Phase 1 | Transaction Patterns |
 | AUBN-01 | Phase 1.1 | Australian Banking |
@@ -229,4 +266,4 @@ Plans:
 ---
 
 *Roadmap created: 2026-04-10*
-*Last updated: 2026-04-12 after Phase 2 planning*
+*Last updated: 2026-04-16 after Phase 01.2 planning*
