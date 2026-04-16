@@ -4,6 +4,8 @@ import au.com.bankforge.common.enums.TransferState;
 import au.com.bankforge.payment.entity.Transfer;
 import au.com.bankforge.payment.repository.TransferRepository;
 import au.com.bankforge.payment.service.TransferStateService;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -41,11 +43,13 @@ class HungTransferDetectorTest {
     @Mock
     private KafkaTemplate<String, String> kafkaTemplate;
 
+    private MeterRegistry meterRegistry;
     private HungTransferDetector hungTransferDetector;
 
     @BeforeEach
     void setUp() {
-        hungTransferDetector = new HungTransferDetector(transferRepository, transferStateService, kafkaTemplate);
+        meterRegistry = new SimpleMeterRegistry();
+        hungTransferDetector = new HungTransferDetector(transferRepository, transferStateService, kafkaTemplate, meterRegistry);
     }
 
     /**
@@ -80,6 +84,8 @@ class HungTransferDetectorTest {
                 eq("banking.transfer.failed"),
                 eq(transfer.getId().toString()),
                 contains("PAYMENT_PROCESSING_TIMEOUT"));
+        assertThat(meterRegistry.get("transfer_initiated_total")
+                .tag("state", "CANCELLED").counter().count()).isEqualTo(1.0);
     }
 
     /**
@@ -119,6 +125,8 @@ class HungTransferDetectorTest {
         verify(kafkaTemplate, never()).send(eq("banking.transfer.failed"), any(), any());
         // No FSM cancel path
         verify(transferStateService, never()).cancel(any(), any());
+        assertThat(meterRegistry.get("transfer_initiated_total")
+                .tag("state", "FAILED").counter().count()).isEqualTo(1.0);
     }
 
     /**
@@ -138,5 +146,6 @@ class HungTransferDetectorTest {
 
         verifyNoInteractions(transferStateService);
         verifyNoInteractions(kafkaTemplate);
+        assertThat(meterRegistry.find("transfer_initiated_total").counters()).isEmpty();
     }
 }

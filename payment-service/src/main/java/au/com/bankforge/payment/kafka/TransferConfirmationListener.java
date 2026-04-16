@@ -1,6 +1,9 @@
 package au.com.bankforge.payment.kafka;
 
+import au.com.bankforge.common.enums.TransferState;
 import au.com.bankforge.payment.service.TransferStateService;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.BackOff;
@@ -38,6 +41,7 @@ public class TransferConfirmationListener {
 
     private final TransferStateService transferStateService;
     private final ObjectMapper objectMapper; // tools.jackson.databind.ObjectMapper (Jackson 3)
+    private final MeterRegistry meterRegistry;
 
     @RetryableTopic(
         attempts = "4",
@@ -57,6 +61,7 @@ public class TransferConfirmationListener {
 
         UUID transferId = parseTransferId(payload);
         transferStateService.confirm(transferId);
+        incrementTransferInitiated(TransferState.CONFIRMED);
         log.info("Transfer confirmed: transferId={}", transferId);
     }
 
@@ -65,6 +70,15 @@ public class TransferConfirmationListener {
             @Payload String payload,
             @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
         log.error("CONFIRMATION DLT: topic={} payload={}", topic, payload);
+    }
+
+    private void incrementTransferInitiated(TransferState state) {
+        Counter.builder("transfer_initiated_total")
+            .description("Number of transfers initiated")
+            .tag("service", "payment-service")
+            .tag("state", state.name())
+            .register(meterRegistry)
+            .increment();
     }
 
     private UUID parseTransferId(String payload) {

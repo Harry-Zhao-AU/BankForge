@@ -4,6 +4,8 @@ import au.com.bankforge.common.enums.TransferState;
 import au.com.bankforge.payment.entity.Transfer;
 import au.com.bankforge.payment.repository.TransferRepository;
 import au.com.bankforge.payment.service.TransferStateService;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -39,6 +41,7 @@ public class HungTransferDetector {
     private final TransferRepository transferRepository;
     private final TransferStateService transferStateService;
     private final KafkaTemplate<String, String> kafkaTemplate;
+    private final MeterRegistry meterRegistry;
 
     /**
      * Runs every 60 seconds. Detects transfers stuck in PAYMENT_PROCESSING or POSTING
@@ -48,6 +51,15 @@ public class HungTransferDetector {
     public void detectHungTransfers() {
         resolveHungPaymentProcessing();
         resolveHungPosting();
+    }
+
+    private void incrementTransferInitiated(TransferState state) {
+        Counter.builder("transfer_initiated_total")
+            .description("Number of transfers initiated")
+            .tag("service", "payment-service")
+            .tag("state", state.name())
+            .register(meterRegistry)
+            .increment();
     }
 
     private void resolveHungPaymentProcessing() {
@@ -60,6 +72,7 @@ public class HungTransferDetector {
                     transfer.getId(), transfer.getCreatedAt());
             try {
                 transferStateService.cancel(transfer.getId(), "PAYMENT_PROCESSING_TIMEOUT");
+                incrementTransferInitiated(TransferState.CANCELLED);
                 kafkaTemplate.send(
                         TRANSFER_FAILED_TOPIC,
                         transfer.getId().toString(),
@@ -85,6 +98,7 @@ public class HungTransferDetector {
             transfer.setState(TransferState.FAILED);
             transfer.setErrorMessage("LEDGER_CONFIRM_TIMEOUT -- manual review required");
             transferRepository.save(transfer);
+            incrementTransferInitiated(TransferState.FAILED);
             log.info("Marked hung POSTING transfer as FAILED (no reversal): id={}", transfer.getId());
         }
     }
