@@ -151,6 +151,7 @@ Overall:  [████░░░░░░] ~35% (phases 1, 1.1, 2 complete)
 | 260413-vd1 | Wire event-driven POSTING→CONFIRMED saga loop | 2026-04-13 | cbd84a5 | [260413-vd1](./quick/260413-vd1-wire-event-driven-posting-confirmed/) |
 | 260415-w91 | Fix ledger-service dual-write risk: Kafka EOS + idempotency guard | 2026-04-15 | 24c9622 | [260415-w91](./quick/260415-w91-fix-ledger-service-dual-write-risk-add-k/) |
 | 260415-x5g | Add @Transactional to LedgerEventListener for atomic double-entry + 3 ITs | 2026-04-15 | 9c3593d | [260415-x5g](./quick/260415-x5g-add-transactional-back-to-ledgereventlis/) |
+| 260417-ohj | Implement OTel traceparent propagation through outbox columns for full saga trace continuity in Jaeger | 2026-04-17 | 4072584 | [260417-ohj](./quick/260417-ohj-implement-otel-traceparent-propagation-t/) |
 
 ### Blockers
 
@@ -160,9 +161,9 @@ None currently.
 
 ## Session Continuity
 
-**Last session:** 2026-04-15T00:00:00.000Z
+**Last session:** 2026-04-17
 
-**Resume point:** Phase 2 complete + event-driven saga loop wired + ledger @Transactional restored. Next: Phase 3 — Service Mesh & Auth. Run `/gsd-discuss-phase 3` or `/gsd-plan-phase 3`.
+**Resume point:** Phase 2 complete + OTel traceparent propagation through outbox implemented (quick task 260417-ohj). Full saga waterfall in Jaeger pending Debezium connector re-registration (see SUMMARY). Next: Phase 3 — Service Mesh & Auth. Run `/gsd-discuss-phase 3` or `/gsd-plan-phase 3`.
 
 **Context to carry forward:**
 
