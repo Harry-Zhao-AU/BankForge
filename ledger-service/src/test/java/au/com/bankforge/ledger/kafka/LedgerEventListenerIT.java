@@ -24,12 +24,12 @@ import java.util.Collections;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.reset;
 
 @Testcontainers
@@ -173,14 +173,13 @@ class LedgerEventListenerIT {
             }
             """.formatted(transferId, fromAccount, toAccount);
 
-        // Make the second save() call throw — simulates a crash mid-transaction
-        AtomicInteger saveCallCount = new AtomicInteger(0);
-        doAnswer(invocation -> {
-            if (saveCallCount.incrementAndGet() == 2) {
-                throw new RuntimeException("Simulated crash after first save");
-            }
-            return invocation.callRealMethod();
-        }).when(spiedLedgerEntryRepository).save(any(LedgerEntry.class));
+        // Make save() throw — simulates a crash mid-transaction.
+        // doThrow is used instead of doAnswer/callRealMethod because Spring Boot 4
+        // JPA repository spies are JDK dynamic proxies (interface-backed); Mockito
+        // cannot delegate callRealMethod() on abstract interface methods.
+        // The @Transactional rollback guarantee holds regardless of which save throws.
+        doThrow(new RuntimeException("Simulated crash during save"))
+                .when(spiedLedgerEntryRepository).save(any(LedgerEntry.class));
 
         try {
             kafkaTemplate.executeInTransaction(ops -> {
