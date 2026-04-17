@@ -185,6 +185,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
       otel-collector:
         condition: service_started
     ports:
@@ -196,6 +198,7 @@ services:
       SPRING_DATASOURCE_USERNAME: payment
       SPRING_DATASOURCE_PASSWORD: secret
       SPRING_DATA_REDIS_HOST: redis
+      SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       SERVICES_ACCOUNT_BASE_URL: http://account-service:8080
       OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4318
 

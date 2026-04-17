@@ -72,7 +72,23 @@
       "Bash(unzip:*)",
       "Bash(podman run:*)",
       "Bash(xargs -I{} unzip -p {} META-INF/spring-autoconfigure-metadata.properties)",
-      "Bash(xargs -I{} unzip -p {} META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports)"
+      "Bash(xargs -I{} unzip -p {} META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports)",
+      "Bash(JAVA_HOME=\"/c/Program Files/JetBrains/IntelliJ IDEA Community Edition 2025.2.4/jbr\" \"/c/Program Files/JetBrains/IntelliJ IDEA Community Edition 2025.2.4/plugins/maven/lib/maven3/bin/mvn\" -pl ledger-service test -Dtest=TransferSagaIT)",
+      "Bash(JAVA_HOME=\"/c/Program Files/JetBrains/IntelliJ IDEA Community Edition 2025.2.4/jbr\" \"/c/Program Files/JetBrains/IntelliJ IDEA Community Edition 2025.2.4/plugins/maven/lib/maven3/bin/mvn\" -pl ledger-service test -Dtest=LedgerEventListenerIT)",
+      "Bash(JAVA_HOME=\"/c/Program Files/JetBrains/IntelliJ IDEA Community Edition 2025.2.4/jbr\" \"/c/Program Files/JetBrains/IntelliJ IDEA Community Edition 2025.2.4/plugins/maven/lib/maven3/bin/mvn\" -pl ledger-service test)",
+      "Skill(gsd-quick)",
+      "Bash(podman compose *)",
+      "Bash('C:/Program Files/JetBrains/IntelliJ IDEA Community Edition 2025.2.4/plugins/maven/lib/maven3/bin/mvn' -pl payment-service test -Dtest=HungTransferDetectorTest -pl payment-service)",
+      "Bash('C:/Program Files/JetBrains/IntelliJ IDEA Community Edition 2025.2.4/plugins/maven/lib/maven3/bin/mvn' -pl ledger-service,payment-service -Dmaven.test.skip=true clean package)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('Total traces:', len\\(d.get\\('data',[]\\)\\)\\) ; [print\\('trace:', t['traceID'], 'spans:', len\\(t.get\\('spans',[]\\)\\), 'op:', t['spans'][0].get\\('operationName','?'\\) if t.get\\('spans'\\) else '?'\\) for t in d.get\\('data',[]\\)]\")",
+      "Bash(\"C:/Program Files/JetBrains/IntelliJ IDEA Community Edition 2025.2.4/plugins/maven/lib/maven3/bin/mvn\" -B package -pl ledger-service -am -Dmaven.test.skip=true -q)",
+      "Bash(JAVA_HOME=\"C:/Program Files/JetBrains/IntelliJ IDEA Community Edition 2025.2.4/jbr\" \"C:/Program Files/JetBrains/IntelliJ IDEA Community Edition 2025.2.4/plugins/maven/lib/maven3/bin/mvn\" -B package -pl ledger-service -am -Dmaven.test.skip=true)",
+      "Bash(JAVA_HOME=\"C:/Program Files/JetBrains/IntelliJ IDEA Community Edition 2025.2.4/jbr\" \"C:/Program Files/JetBrains/IntelliJ IDEA Community Edition 2025.2.4/plugins/maven/lib/maven3/bin/mvn\" -pl account-service -am clean package -Dmaven.test.skip=true -q)",
+      "Bash(JAVA_HOME=\"C:/Program Files/JetBrains/IntelliJ IDEA Community Edition 2025.2.4/jbr\" \"C:/Program Files/JetBrains/IntelliJ IDEA Community Edition 2025.2.4/plugins/maven/lib/maven3/bin/mvn\" clean package -Dmaven.test.skip=true -q)",
+      "Bash(python -m json.tool)",
+      "Bash(podman inspect *)",
+      "Bash(podman port *)",
+      "Bash(podman ps *)"
     ]
   }
 }

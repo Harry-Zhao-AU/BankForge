@@ -76,7 +76,6 @@ public class TransferConfirmationListener {
         try (Scope scope = processingSpan.makeCurrent()) {
 
             UUID transferId = parseTransferId(payload);
-            // setAttribute makes this span searchable by banking.transaction.id in Jaeger.
             Span.current().setAttribute("banking.transaction.id", transferId.toString());
             transferStateService.confirm(transferId);
             log.info("Transfer confirmed: transferId={}", transferId);

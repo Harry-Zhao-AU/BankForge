@@ -44,6 +44,9 @@ public class KafkaConfig {
         factory.setConsumerFactory(consumerFactory);
         factory.getContainerProperties().setTransactionManager(kafkaTransactionManager);
         factory.getContainerProperties().setEosMode(ContainerProperties.EOSMode.V2);
+        // Propagate observation-enabled into the custom factory — auto-configured setting is
+        // lost when a @Bean overrides the factory, causing consumers to run without OTel spans.
+        factory.getContainerProperties().setObservationEnabled(true);
 
         ExponentialBackOff backOff = new ExponentialBackOff(1000L, 2.0);
         backOff.setMaxElapsedTime(30000L);
