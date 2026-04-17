@@ -9,6 +9,8 @@ import au.com.bankforge.account.exception.InsufficientFundsException;
 import au.com.bankforge.account.repository.AccountRepository;
 import au.com.bankforge.account.repository.OutboxEventRepository;
 import au.com.bankforge.common.dto.TransferCreatedEvent;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -88,11 +90,21 @@ public class TransferService {
 
         // Outbox write — SAME transaction as balance changes (T-1-03: immutable audit trail)
         UUID transferId = UUID.randomUUID();
+
+        // Capture W3C traceparent from the current OTel span so Debezium can lift it
+        // to a Kafka header via additional.placement=traceparent:header:traceparent.
+        // Consumers reconstruct a child span under this trace for end-to-end visibility.
+        SpanContext spanCtx = Span.current().getSpanContext();
+        String traceparent = spanCtx.isValid()
+                ? "00-" + spanCtx.getTraceId() + "-" + spanCtx.getSpanId() + "-01"
+                : null;
+
         OutboxEvent outbox = OutboxEvent.builder()
                 .aggregatetype("transfer")
                 .aggregateid(transferId.toString())
                 .type("TransferInitiated")
                 .payload(serializePayload(transferId, fromId, toId, amount))
+                .traceparent(traceparent)
                 .build();
         outboxEventRepository.save(outbox);
 
