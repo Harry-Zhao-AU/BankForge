@@ -49,6 +49,9 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
+      - name: Install common module
+        run: mvn -B install -pl common -Dmaven.test.skip=true
+
       - name: Test ${{ matrix.service }}
         run: mvn -B test -pl ${{ matrix.service }}
 

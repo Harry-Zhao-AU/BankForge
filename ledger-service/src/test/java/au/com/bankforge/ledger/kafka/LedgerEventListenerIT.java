@@ -229,7 +229,7 @@ class LedgerEventListenerIT {
         // Simulate retry: call the listener method directly with the same payload.
         // This represents the case where JPA committed but Kafka TX failed,
         // causing the broker to redeliver the message.
-        listener.onTransferEvent(payload, "banking.transfer.events", 999L);
+        listener.onTransferEvent(payload, "banking.transfer.events", 999L, null);
 
         // Still exactly 2 entries — idempotency guard prevented duplicates
         var entries = spiedLedgerEntryRepository.findByTransferId(transferId);
