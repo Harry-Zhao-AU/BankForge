@@ -11,6 +11,8 @@ import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.PostConstruct;
+import io.opentelemetry.api.baggage.Baggage;
+import io.opentelemetry.context.Scope;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -129,9 +131,14 @@ public class PaymentService {
             log.atInfo().addKeyValue("transferId", transfer.getId()).log("Transfer initiated");
 
             // Step 3: ACID transfer in account-service — outside any transaction.
-            // Track whether the call returned successfully so we know whether to attempt reversal.
+            // Propagate this transfer's ID via W3C Baggage so account-service uses the same UUID
+            // for its outbox event (D-15). Without this, account-service generates a random UUID
+            // and the ledger confirmation cannot be matched back to this Transfer record.
             boolean transferExecuted = false;
-            try {
+            try (Scope ignored = Baggage.current().toBuilder()
+                    .put("banking.transaction.id", transfer.getId().toString())
+                    .build()
+                    .makeCurrent()) {
                 accountServiceClient.executeTransfer(
                         request.fromAccountId(), request.toAccountId(),
                         request.amount(), request.description());

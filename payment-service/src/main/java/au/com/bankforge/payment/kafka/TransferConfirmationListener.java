@@ -1,12 +1,7 @@
 package au.com.bankforge.payment.kafka;
 
 import au.com.bankforge.payment.service.TransferStateService;
-import io.opentelemetry.api.GlobalOpenTelemetry;
 import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.api.trace.Tracer;
-import io.opentelemetry.context.Scope;
-import io.opentelemetry.context.propagation.TextMapGetter;
-import io.opentelemetry.api.trace.propagation.W3CTraceContextPropagator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.BackOff;
@@ -20,7 +15,6 @@ import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
-import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -35,10 +29,10 @@ import java.util.UUID;
  * 4 attempts. POSTING state transfers that don't receive confirmation within the retry
  * window will require manual investigation.
  *
- * OTel trace continuity: reads the "traceparent" Kafka header (set by Debezium from the
- * ledger outbox column), reconstructs the remote SpanContext via W3CTraceContextPropagator,
- * and creates a child span under the originating payment-service trace so the full saga
- * appears as one connected waterfall in Jaeger.
+ * OTel trace continuity: observationEnabled=true (application.yml) automatically reads the
+ * "traceparent" Kafka header set by Debezium from the ledger outbox column, placing the
+ * auto-observation span inside the originating trace. Span.current() is used directly —
+ * no manual child span or makeCurrent() needed.
  *
  * JACKSON 3: Uses tools.jackson.databind.ObjectMapper (Spring Boot 4 / Jackson 3).
  * Do NOT use com.fasterxml.jackson.databind.ObjectMapper (Jackson 2, will not compile).
@@ -47,8 +41,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 @Slf4j
 public class TransferConfirmationListener {
-
-    private static final Tracer TRACER = GlobalOpenTelemetry.getTracer("payment-service");
 
     private final TransferStateService transferStateService;
     private final ObjectMapper objectMapper; // tools.jackson.databind.ObjectMapper (Jackson 3)
@@ -70,19 +62,12 @@ public class TransferConfirmationListener {
 
         log.info("Payment-service received transfer confirmation: topic={} offset={}", topic, offset);
 
-        // Reconstruct remote parent context from traceparent header and wrap business
-        // logic in a child span so this consumer appears in the originating trace.
-        Span processingSpan = buildChildSpan(TRACER, "banking.transfer.confirmed process", traceparent);
-        try (Scope scope = processingSpan.makeCurrent()) {
-
-            UUID transferId = parseTransferId(payload);
-            Span.current().setAttribute("banking.transaction.id", transferId.toString());
-            transferStateService.confirm(transferId);
-            log.info("Transfer confirmed: transferId={}", transferId);
-
-        } finally {
-            processingSpan.end();
-        }
+        // observationEnabled=true already placed this listener's span inside the originating trace.
+        // Span.current() IS the auto-obs span — setAttribute works correctly here.
+        UUID transferId = parseTransferId(payload);
+        Span.current().setAttribute("banking.transaction.id", transferId.toString());
+        transferStateService.confirm(transferId);
+        log.info("Transfer confirmed: transferId={}", transferId);
     }
 
     @DltHandler
@@ -102,39 +87,6 @@ public class TransferConfirmationListener {
             return UUID.fromString(node.asText());
         } catch (Exception e) {
             throw new RuntimeException("Failed to parse confirmation payload: " + payload, e);
-        }
-    }
-
-    /**
-     * Build a child span under the remote trace identified by the W3C traceparent header value.
-     * If traceparent is null or malformed, falls back to a new root span (graceful degradation).
-     */
-    private Span buildChildSpan(Tracer tracer, String name, String traceparent) {
-        io.opentelemetry.api.trace.SpanBuilder builder = tracer.spanBuilder(name);
-        if (traceparent != null) {
-            io.opentelemetry.context.Context remoteCtx =
-                    W3CTraceContextPropagator.getInstance()
-                            .extract(
-                                    io.opentelemetry.context.Context.root(),
-                                    Map.of("traceparent", traceparent),
-                                    MapTextMapGetter.INSTANCE);
-            builder.setParent(remoteCtx);
-        }
-        return builder.startSpan();
-    }
-
-    private static final class MapTextMapGetter
-            implements TextMapGetter<Map<String, String>> {
-        static final MapTextMapGetter INSTANCE = new MapTextMapGetter();
-
-        @Override
-        public Iterable<String> keys(Map<String, String> carrier) {
-            return carrier.keySet();
-        }
-
-        @Override
-        public String get(Map<String, String> carrier, String key) {
-            return carrier == null ? null : carrier.get(key);
         }
     }
 }

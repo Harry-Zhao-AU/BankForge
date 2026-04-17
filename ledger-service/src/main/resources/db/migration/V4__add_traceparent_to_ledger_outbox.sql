@@ -12,4 +12,4 @@
 --
 -- NOTE: ledger-service V3 was already taken by V3__add_ledger_outbox.sql -- this is V4.
 
-ALTER TABLE ledger_outbox_event ADD COLUMN traceparent VARCHAR(55);
+ALTER TABLE ledger_outbox_event ADD COLUMN IF NOT EXISTS traceparent VARCHAR(55);

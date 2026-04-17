@@ -10,4 +10,4 @@
 -- Column is nullable: existing rows and events published before this migration
 -- degrade gracefully (null header -> consumer starts a new root trace, no regression).
 
-ALTER TABLE outbox_event ADD COLUMN traceparent VARCHAR(55);
+ALTER TABLE outbox_event ADD COLUMN IF NOT EXISTS traceparent VARCHAR(55);
