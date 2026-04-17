@@ -12,6 +12,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import jakarta.annotation.PostConstruct;
 import io.opentelemetry.api.baggage.Baggage;
+import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Scope;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -129,6 +130,7 @@ public class PaymentService {
 
             incrementTransferInitiated(TransferState.PENDING);
             log.atInfo().addKeyValue("transferId", transfer.getId()).log("Transfer initiated");
+            Span.current().setAttribute("banking.transaction.id", transfer.getId().toString());
 
             // Step 3: ACID transfer in account-service — outside any transaction.
             // Propagate this transfer's ID via W3C Baggage so account-service uses the same UUID
