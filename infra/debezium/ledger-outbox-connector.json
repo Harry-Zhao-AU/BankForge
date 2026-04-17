@@ -23,7 +23,7 @@
     "transforms.outbox.table.field.event.payload": "payload",
     "transforms.outbox.table.expand.json.payload": "true",
     "transforms.outbox.route.topic.replacement": "banking.transfer.confirmed",
-    "transforms.outbox.table.fields.additional.placement": "aggregateid:header:transaction-id",
+    "transforms.outbox.table.fields.additional.placement": "aggregateid:header:transaction-id,traceparent:header:traceparent",
     "key.converter": "org.apache.kafka.connect.json.JsonConverter",
     "key.converter.schemas.enable": "false",
     "value.converter": "org.apache.kafka.connect.json.JsonConverter",
