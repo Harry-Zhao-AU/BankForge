@@ -160,7 +160,13 @@ public class PaymentService {
                 // may mean money did or did not move); in that case we do NOT attempt reversal
                 // to avoid a double-move. An alert/manual review is required for those cases.
                 if (transferExecuted) {
-                    try {
+                    // Re-establish Baggage so account-service's reversal uses the same
+                    // banking.transaction.id (the Scope from the outer try-with-resources
+                    // is closed before this catch block runs — Java try-with-resources semantics).
+                    try (Scope reverseScope = Baggage.current().toBuilder()
+                            .put("banking.transaction.id", transfer.getId().toString())
+                            .build()
+                            .makeCurrent()) {
                         accountServiceClient.reverseTransfer(
                                 request.fromAccountId(), request.toAccountId(),
                                 request.amount(),
