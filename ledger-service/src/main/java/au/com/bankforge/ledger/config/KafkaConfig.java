@@ -6,10 +6,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
 import org.springframework.kafka.core.ConsumerFactory;
-import org.springframework.kafka.core.ProducerFactory;
-import org.springframework.kafka.listener.ContainerProperties;
 import org.springframework.kafka.listener.DefaultErrorHandler;
-import org.springframework.kafka.transaction.KafkaTransactionManager;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.util.backoff.ExponentialBackOff;
 
@@ -17,11 +14,9 @@ import org.springframework.util.backoff.ExponentialBackOff;
 public class KafkaConfig {
 
     /**
-     * Re-declare the JPA transaction manager as the primary "transactionManager" bean.
-     * This is required because Spring Boot auto-configuration stops registering a default
-     * transactionManager bean when a second PlatformTransactionManager (KafkaTransactionManager)
-     * is present in the context. Spring Data JPA's @Transactional on repository methods
-     * resolves by qualifier "transactionManager", so this bean must be present by that name.
+     * Re-declare the JPA transaction manager as primary.
+     * Ledger-service uses the outbox pattern — it never produces to Kafka directly,
+     * so no KafkaTransactionManager is needed. JPA handles atomicity of DB writes.
      */
     @Bean
     @Primary
@@ -30,20 +25,11 @@ public class KafkaConfig {
     }
 
     @Bean
-    public KafkaTransactionManager<String, String> kafkaTransactionManager(
-            ProducerFactory<String, String> producerFactory) {
-        return new KafkaTransactionManager<>(producerFactory);
-    }
-
-    @Bean
     public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory(
-            ConsumerFactory<String, String> consumerFactory,
-            KafkaTransactionManager<String, String> kafkaTransactionManager) {
+            ConsumerFactory<String, String> consumerFactory) {
         ConcurrentKafkaListenerContainerFactory<String, String> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory);
-        factory.getContainerProperties().setTransactionManager(kafkaTransactionManager);
-        factory.getContainerProperties().setEosMode(ContainerProperties.EOSMode.V2);
         // Propagate observation-enabled into the custom factory — auto-configured setting is
         // lost when a @Bean overrides the factory, causing consumers to run without OTel spans.
         factory.getContainerProperties().setObservationEnabled(true);

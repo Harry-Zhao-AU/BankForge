@@ -2,9 +2,7 @@ package au.com.bankforge.ledger.kafka;
 
 import au.com.bankforge.ledger.entity.LedgerEntry;
 import au.com.bankforge.ledger.repository.LedgerEntryRepository;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
+import au.com.bankforge.ledger.repository.LedgerOutboxEventRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,16 +17,12 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
-import java.time.Duration;
-import java.util.Collections;
-import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.reset;
 
@@ -65,6 +59,9 @@ class LedgerEventListenerIT {
     private LedgerEntryRepository spiedLedgerEntryRepository;
 
     @Autowired
+    private LedgerOutboxEventRepository ledgerOutboxEventRepository;
+
+    @Autowired
     private LedgerEventListener listener;
 
     @Test
@@ -96,29 +93,16 @@ class LedgerEventListenerIT {
             assertThat(entries).anyMatch(e -> "CREDIT".equals(e.getEntryType()));
         });
 
-        // Also verify that banking.transfer.confirmed was published by LedgerEventListener
-        Properties consumerProps = new Properties();
-        consumerProps.put("bootstrap.servers", kafka.getBootstrapServers());
-        consumerProps.put("group.id", "it-verifier-" + UUID.randomUUID());
-        consumerProps.put("auto.offset.reset", "earliest");
-        consumerProps.put("key.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-        consumerProps.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
-        consumerProps.put("isolation.level", "read_committed");
-
-        try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(consumerProps)) {
-            consumer.subscribe(Collections.singletonList("banking.transfer.confirmed"));
-            await().atMost(15, TimeUnit.SECONDS).untilAsserted(() -> {
-                ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(500));
-                boolean found = false;
-                for (ConsumerRecord<String, String> r : records) {
-                    if (r.key().equals(transferId.toString())) {
-                        found = true;
-                        assertThat(r.value()).contains(transferId.toString());
-                    }
-                }
-                assertThat(found).as("Confirmation message for transferId=%s not found", transferId).isTrue();
-            });
-        }
+        // Verify the outbox row was written — Debezium CDC publishes banking.transfer.confirmed
+        // in production; in tests without Debezium we assert the outbox table directly.
+        await().atMost(15, TimeUnit.SECONDS).untilAsserted(() -> {
+            var outboxRows = ledgerOutboxEventRepository.findAll().stream()
+                    .filter(o -> transferId.toString().equals(o.getAggregateid()))
+                    .toList();
+            assertThat(outboxRows).hasSize(1);
+            assertThat(outboxRows.getFirst().getType()).isEqualTo("TransferConfirmed");
+            assertThat(outboxRows.getFirst().getPayload()).contains(transferId.toString());
+        });
     }
 
     @Test
