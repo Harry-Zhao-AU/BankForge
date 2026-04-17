@@ -20,5 +20,6 @@ public enum TransferState {
     POSTING,
     CONFIRMED,
     COMPENSATING,
-    CANCELLED
+    CANCELLED,
+    FAILED
 }
