@@ -49,6 +49,14 @@ public class LedgerOutboxEvent {
     @Column(nullable = false, columnDefinition = "jsonb")
     private String payload;
 
+    /**
+     * W3C traceparent string (format: 00-<32-hex-traceId>-<16-hex-spanId>-<2-hex-flags>).
+     * Nullable — existing rows and pre-migration events degrade gracefully.
+     * Lifted to Kafka header "traceparent" by Debezium EventRouter additional.placement.
+     */
+    @Column(length = 55)
+    private String traceparent;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

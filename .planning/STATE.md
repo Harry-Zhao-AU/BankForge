@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: unknown
-last_updated: "2026-04-16T12:22:08.397Z"
+status: in_progress
+last_updated: "2026-04-15T00:00:00.000Z"
 progress:
   total_phases: 6
-  completed_phases: 3
+  completed_phases: 2
   total_plans: 10
-  completed_plans: 10
-  percent: 100
+  completed_plans: 7
+  percent: 35
 ---
 
 # State: BankForge
@@ -30,7 +30,7 @@ progress:
 
 ## Current Position
 
-Phase: 02
+Phase: 2 (observability) — COMPLETE
 | Field | Value |
 |-------|-------|
 | Phase | 2 — Observability |
@@ -151,7 +151,6 @@ Overall:  [████░░░░░░] ~35% (phases 1, 1.1, 2 complete)
 | 260413-vd1 | Wire event-driven POSTING→CONFIRMED saga loop | 2026-04-13 | cbd84a5 | [260413-vd1](./quick/260413-vd1-wire-event-driven-posting-confirmed/) |
 | 260415-w91 | Fix ledger-service dual-write risk: Kafka EOS + idempotency guard | 2026-04-15 | 24c9622 | [260415-w91](./quick/260415-w91-fix-ledger-service-dual-write-risk-add-k/) |
 | 260415-x5g | Add @Transactional to LedgerEventListener for atomic double-entry + 3 ITs | 2026-04-15 | 9c3593d | [260415-x5g](./quick/260415-x5g-add-transactional-back-to-ledgereventlis/) |
-| 260416-u6y | add the metric for all states, so I can see the transfer state in grafana without querying the db | 2026-04-16 | 7995b13 | [260416-u6y](./quick/260416-u6y-add-the-metric-for-all-states-so-i-can-s/) |
 
 ### Blockers
 
@@ -179,4 +178,4 @@ None currently.
 ---
 
 *State initialized: 2026-04-10*
-*Last updated: 2026-04-16 — Quick 260416-u6y: add transfer_initiated_total metrics for all states (CONFIRMED, FAILED, CANCELLED paths)*
+*Last updated: 2026-04-15 — Quick 260415-x5g: LedgerEventListener @Transactional restored + atomicity/idempotency ITs*

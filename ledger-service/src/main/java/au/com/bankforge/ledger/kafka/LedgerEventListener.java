@@ -1,15 +1,11 @@
 package au.com.bankforge.ledger.kafka;
 
 import au.com.bankforge.ledger.entity.LedgerEntry;
-import au.com.bankforge.ledger.entity.LedgerOutboxEvent;
 import au.com.bankforge.ledger.repository.LedgerEntryRepository;
-import au.com.bankforge.ledger.repository.LedgerOutboxEventRepository;
-import io.opentelemetry.api.baggage.Baggage;
-import io.opentelemetry.api.trace.Span;
-import io.opentelemetry.context.Scope;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.KafkaHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.messaging.handler.annotation.Payload;
@@ -27,8 +23,8 @@ import java.util.UUID;
 public class LedgerEventListener {
 
     private final LedgerEntryRepository ledgerEntryRepository;
-    private final LedgerOutboxEventRepository ledgerOutboxEventRepository;
     private final ObjectMapper objectMapper;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
     @Transactional
     @KafkaListener(
@@ -55,54 +51,41 @@ public class LedgerEventListener {
         UUID toAccountId = UUID.fromString(toAccountIdNode.asText());
         BigDecimal amount = new BigDecimal(amountNode.asText());
 
-        // Idempotency guard (D-05) — true no-op if entries already exist for this transferId.
-        // Debezium already published the original outbox row; no need to write again.
+        // Idempotency guard — skip DB writes if entries already exist for this transferId
         if (ledgerEntryRepository.existsByTransferId(transferId)) {
             log.info("Ledger entries already exist for transferId={}, skipping (idempotent replay)", transferId);
+            // Still publish confirmation — the downstream consumer may not have received it
+            String confirmPayload = "{\"transferId\":\"" + transferId + "\",\"status\":\"CONFIRMED\"}";
+            kafkaTemplate.send("banking.transfer.confirmed", transferId.toString(), confirmPayload);
             return;
         }
 
-        // D-15, D-16: setAttribute makes it searchable in Jaeger; Baggage propagates downstream
-        Span.current().setAttribute("banking.transaction.id", transferId.toString());
-        Baggage baggage = Baggage.current().toBuilder()
-                .put("banking.transaction.id", transferId.toString())
+        LedgerEntry debit = LedgerEntry.builder()
+                .transferId(transferId)
+                .accountId(fromAccountId)
+                .entryType("DEBIT")
+                .amount(amount)
+                .currency("AUD")
+                .description("Transfer " + transferId + " debit")
                 .build();
-        try (Scope scope = baggage.makeCurrent()) {
 
-            LedgerEntry debit = LedgerEntry.builder()
-                    .transferId(transferId)
-                    .accountId(fromAccountId)
-                    .entryType("DEBIT")
-                    .amount(amount)
-                    .currency("AUD")
-                    .description("Transfer " + transferId + " debit")
-                    .build();
+        LedgerEntry credit = LedgerEntry.builder()
+                .transferId(transferId)
+                .accountId(toAccountId)
+                .entryType("CREDIT")
+                .amount(amount)
+                .currency("AUD")
+                .description("Transfer " + transferId + " credit")
+                .build();
 
-            LedgerEntry credit = LedgerEntry.builder()
-                    .transferId(transferId)
-                    .accountId(toAccountId)
-                    .entryType("CREDIT")
-                    .amount(amount)
-                    .currency("AUD")
-                    .description("Transfer " + transferId + " credit")
-                    .build();
+        ledgerEntryRepository.save(debit);
+        ledgerEntryRepository.save(credit);
 
-            ledgerEntryRepository.save(debit);
-            ledgerEntryRepository.save(credit);
+        log.info("Ledger entries written: transferId={} debit={} credit={}", transferId, debit.getId(), credit.getId());
 
-            log.info("Ledger entries written: transferId={} debit={} credit={}", transferId, debit.getId(), credit.getId());
-
-            // D-04: Write outbox row in same transaction — Debezium CDC will publish the confirmation
-            LedgerOutboxEvent outboxRow = LedgerOutboxEvent.builder()
-                    .aggregatetype("transfer-confirmation")
-                    .aggregateid(transferId.toString())
-                    .type("TransferConfirmed")
-                    .payload("{\"transferId\":\"" + transferId + "\",\"status\":\"CONFIRMED\"}")
-                    .build();
-            ledgerOutboxEventRepository.save(outboxRow);
-
-            log.info("Outbox row written for transferId={} — Debezium will publish confirmation", transferId);
-        }
+        String confirmPayload = "{\"transferId\":\"" + transferId + "\",\"status\":\"CONFIRMED\"}";
+        kafkaTemplate.send("banking.transfer.confirmed", transferId.toString(), confirmPayload);
+        log.info("Published confirmation event: transferId={}", transferId);
     }
 
     private JsonNode parsePayload(String payload) {

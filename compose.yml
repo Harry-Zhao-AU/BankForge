@@ -138,8 +138,6 @@ services:
         condition: service_healthy
       account-db:
         condition: service_healthy
-      ledger-db:
-        condition: service_healthy
     environment:
       BOOTSTRAP_SERVERS: kafka:9092
       GROUP_ID: 1
@@ -163,8 +161,7 @@ services:
 
   account-service:
     build:
-      context: .
-      dockerfile: account-service/Dockerfile
+      context: ./account-service
     depends_on:
       account-db:
         condition: service_healthy
@@ -182,8 +179,7 @@ services:
 
   payment-service:
     build:
-      context: .
-      dockerfile: payment-service/Dockerfile
+      context: ./payment-service
     depends_on:
       payment-db:
         condition: service_healthy
@@ -205,8 +201,7 @@ services:
 
   ledger-service:
     build:
-      context: .
-      dockerfile: ledger-service/Dockerfile
+      context: ./ledger-service
     depends_on:
       ledger-db:
         condition: service_healthy
@@ -227,8 +222,7 @@ services:
 
   notification-service:
     build:
-      context: .
-      dockerfile: notification-service/Dockerfile
+      context: ./notification-service
     depends_on:
       kafka:
         condition: service_healthy

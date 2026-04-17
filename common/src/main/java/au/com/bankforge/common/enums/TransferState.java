@@ -10,8 +10,6 @@ package au.com.bankforge.common.enums;
  *                               ↓
  *                           CANCELLED
  *
- *   POSTING → FAILED  (operational timeout, set by HungTransferDetector)
- *
  * POSTING = ledger-service is recording the double-entry bookkeeping entries
  * (debit entry + credit entry). Australian banking terminology.
  */
@@ -22,7 +20,5 @@ public enum TransferState {
     POSTING,
     CONFIRMED,
     COMPENSATING,
-    CANCELLED,
-    // FAILED = operational timeout (set by HungTransferDetector, not via FSM transition)
-    FAILED
+    CANCELLED
 }

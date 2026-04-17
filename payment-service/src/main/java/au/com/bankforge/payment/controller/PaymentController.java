@@ -50,9 +50,7 @@ public class PaymentController {
         InitiateTransferResponse response = paymentService.initiateTransfer(request);
         // Return 201 for new transfer, 200 for idempotent replay per TXNS-05
         HttpStatus status = isNew ? HttpStatus.CREATED : HttpStatus.OK;
-        return ResponseEntity.status(status)
-                .header("X-Transaction-Id", response.transferId().toString())
-                .body(response);
+        return ResponseEntity.status(status).body(response);
     }
 
     /**

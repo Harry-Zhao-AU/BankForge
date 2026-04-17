@@ -30,26 +30,3 @@ fi
 echo ""
 echo "Connector status:"
 curl -s "$CONNECT_URL/connectors/$CONNECTOR_NAME/status" | python3 -m json.tool
-
-echo ""
-echo "--- Ledger Outbox Connector ---"
-LEDGER_CONNECTOR_JSON="$SCRIPT_DIR/../infra/debezium/ledger-outbox-connector.json"
-LEDGER_CONNECTOR_NAME="bankforge-ledger-outbox-connector"
-
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$CONNECT_URL/connectors/$LEDGER_CONNECTOR_NAME" 2>/dev/null || echo "000")
-if [ "$STATUS" == "200" ]; then
-  echo "Updating existing connector '$LEDGER_CONNECTOR_NAME'..."
-  CONFIG=$(python3 -c "import json,sys; d=json.load(open('$LEDGER_CONNECTOR_JSON')); print(json.dumps(d.get('config', d)))")
-  curl -s -X PUT -H "Content-Type: application/json" \
-    --data "$CONFIG" \
-    "$CONNECT_URL/connectors/$LEDGER_CONNECTOR_NAME/config" | python3 -m json.tool
-else
-  echo "Creating connector '$LEDGER_CONNECTOR_NAME'..."
-  curl -s -X POST -H "Content-Type: application/json" \
-    --data @"$LEDGER_CONNECTOR_JSON" \
-    "$CONNECT_URL/connectors" | python3 -m json.tool
-fi
-
-echo ""
-echo "Ledger connector status:"
-curl -s "$CONNECT_URL/connectors/$LEDGER_CONNECTOR_NAME/status" | python3 -m json.tool
