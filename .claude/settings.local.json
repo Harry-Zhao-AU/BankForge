@@ -7,7 +7,7 @@
           {
             "type": "command",
             "if": "Bash(git push *)",
-            "command": "if bash C:/SideProject/BankForge/scripts/validate-observability.sh >&2; then exit 0; else printf '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Observability validation failed — fix failures above or bypass with SKIP_OBS_CHECK=1\"}}'; exit 1; fi",
+            "command": "C:/SideProject/BankForge/scripts/obs-pre-push-hook.sh",
             "timeout": 120,
             "statusMessage": "Validating observability before push..."
           }
