@@ -32,7 +32,7 @@ import static org.awaitility.Awaitility.await;
  * Covers 3 scenarios (D-22, D-23, D-24, D-25):
  *   1. Happy path — event received -> debit + credit + outbox row written
  *   2. Idempotency — duplicate event -> exactly 2 ledger entries, exactly 1 outbox row
- *   3. DLT routing — poison pill -> message lands in banking.transfer.events.DLT
+ *   3. DLT routing — poison pill -> message lands in banking.transfer.events-dlt
  *
  * CRITICAL: Uses non-transactional KafkaTemplate sends (no executeInTransaction).
  * The application's KafkaTemplate is non-transactional after EOS properties were
@@ -159,7 +159,7 @@ class TransferSagaIT {
 
     /**
      * D-25 Scenario 3: DLT routing.
-     * A poison pill (invalid JSON) must land in banking.transfer.events.DLT
+     * A poison pill (invalid JSON) must land in banking.transfer.events-dlt
      * after retry exhaustion via DeadLetterPublishingRecoverer.
      *
      * ExponentialBackOff(1000, 2.0) maxElapsed=30000 means ~3 retries over ~7s.
@@ -180,7 +180,7 @@ class TransferSagaIT {
         consumerProps.put("value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
 
         try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(consumerProps)) {
-            consumer.subscribe(Collections.singletonList("banking.transfer.events.DLT"));
+            consumer.subscribe(Collections.singletonList("banking.transfer.events-dlt"));
 
             // ExponentialBackOff(1000, 2.0) maxElapsed=30000 means ~3 retries over ~7s.
             // Add generous timeout for container startup variance.
@@ -193,7 +193,7 @@ class TransferSagaIT {
                         assertThat(r.value()).isEqualTo(poisonPayload);
                     }
                 }
-                assertThat(found).as("Poison pill should land in banking.transfer.events.DLT topic").isTrue();
+                assertThat(found).as("Poison pill should land in banking.transfer.events-dlt topic").isTrue();
             });
         }
     }

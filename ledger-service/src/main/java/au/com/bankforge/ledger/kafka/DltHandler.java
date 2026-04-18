@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 /**
  * Dead Letter Topic (DLT) handler for exhausted-retry messages.
  *
- * Consumes from banking.transfer.events.DLT — messages routed here by
+ * Consumes from banking.transfer.events-dlt — messages routed here by
  * DeadLetterPublishingRecoverer after ExponentialBackOff is exhausted (D-12, D-13).
  *
  * SECURITY (T-01.2-04): This handler is READ-ONLY. It logs and discards.
@@ -28,7 +28,7 @@ import org.springframework.stereotype.Component;
 public class DltHandler {
 
     @KafkaListener(
-        topics = "banking.transfer.events.DLT",
+        topics = "banking.transfer.events-dlt",
         groupId = "ledger-service-dlt"
     )
     public void onDltMessage(ConsumerRecord<String, String> record) {
