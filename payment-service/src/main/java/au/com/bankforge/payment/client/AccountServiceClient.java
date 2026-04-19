@@ -1,5 +1,6 @@
 package au.com.bankforge.payment.client;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
@@ -38,6 +39,7 @@ public class AccountServiceClient {
      * @return AccountTransferResponse from account-service
      * @throws org.springframework.web.client.RestClientResponseException on 4xx/5xx response
      */
+    @CircuitBreaker(name = "accountServiceExecute")
     public AccountTransferResponse executeTransfer(
             UUID fromAccountId, UUID toAccountId, BigDecimal amount, String description) {
         return accountRestClient.post()
@@ -65,6 +67,7 @@ public class AccountServiceClient {
      * @param description           reversal description for audit trail
      * @return AccountTransferResponse confirming the reversal
      */
+    @CircuitBreaker(name = "accountServiceReverse")
     public AccountTransferResponse reverseTransfer(
             UUID originalFromAccountId, UUID originalToAccountId,
             BigDecimal amount, String description) {

@@ -61,6 +61,33 @@ management:
         otlp:
           endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/traces
 
+resilience4j:
+  circuitbreaker:
+    instances:
+      accountServiceExecute:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        failureRateThreshold: 50
+        slowCallDurationThreshold: PT5S
+        slowCallRateThreshold: 50
+        waitDurationInOpenState: PT30S
+        permittedNumberOfCallsInHalfOpenState: 3
+        registerHealthIndicator: true
+        # 4xx responses (e.g. InsufficientFunds) are business rejections, not infrastructure failures
+        ignoreExceptions:
+          - org.springframework.web.client.HttpClientErrorException
+      accountServiceReverse:
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 3
+        failureRateThreshold: 50
+        slowCallDurationThreshold: PT5S
+        slowCallRateThreshold: 50
+        waitDurationInOpenState: PT30S
+        permittedNumberOfCallsInHalfOpenState: 2
+        registerHealthIndicator: true
+        ignoreExceptions:
+          - org.springframework.web.client.HttpClientErrorException
+
 logging:
   structured:
     format:

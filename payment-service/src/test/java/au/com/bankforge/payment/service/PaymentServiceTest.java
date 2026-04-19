@@ -5,6 +5,8 @@ import au.com.bankforge.payment.dto.InitiateTransferRequest;
 import au.com.bankforge.payment.dto.InitiateTransferResponse;
 import au.com.bankforge.payment.entity.Transfer;
 import au.com.bankforge.payment.repository.TransferRepository;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -151,6 +153,37 @@ class PaymentServiceTest {
         assertThat(dbTransfer).isPresent();
         assertThat(dbTransfer.get().getState()).isEqualTo(CANCELLED);
         assertThat(dbTransfer.get().getErrorMessage()).isNotBlank();
+    }
+
+    @Test
+    void initiateTransfer_circuitBreakerOpen_cancelledWithoutAttemptingReversal() {
+        CallNotPermittedException cbOpen = CallNotPermittedException
+                .createCallNotPermittedException(CircuitBreaker.ofDefaults("accountServiceExecute"));
+        when(accountServiceClient.executeTransfer(any(), any(), any(), any())).thenThrow(cbOpen);
+
+        InitiateTransferResponse response = paymentService.initiateTransfer(
+                buildRequest("cb-open-key-" + UUID.randomUUID()));
+
+        assertThat(response.state()).isEqualTo(CANCELLED.name());
+        // reverseTransfer must never be called — money never moved (transferExecuted = false)
+        verify(accountServiceClient, never()).reverseTransfer(any(), any(), any(), any());
+    }
+
+    @Test
+    void initiateTransfer_circuitBreakerOpen_storesUserFriendlyErrorMessage() {
+        CallNotPermittedException cbOpen = CallNotPermittedException
+                .createCallNotPermittedException(CircuitBreaker.ofDefaults("accountServiceExecute"));
+        when(accountServiceClient.executeTransfer(any(), any(), any(), any())).thenThrow(cbOpen);
+
+        InitiateTransferResponse response = paymentService.initiateTransfer(
+                buildRequest("cb-msg-key-" + UUID.randomUUID()));
+
+        Optional<Transfer> dbTransfer = transferRepository.findById(response.transferId());
+        assertThat(dbTransfer).isPresent();
+        // Raw Resilience4j message must not reach the DB — only the clean user-facing message
+        assertThat(dbTransfer.get().getErrorMessage())
+                .isEqualTo("Account service temporarily unavailable, please retry later")
+                .doesNotContain("CircuitBreaker");
     }
 
     @Test

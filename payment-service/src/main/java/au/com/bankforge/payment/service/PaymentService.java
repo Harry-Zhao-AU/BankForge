@@ -7,6 +7,7 @@ import au.com.bankforge.payment.dto.InitiateTransferResponse;
 import au.com.bankforge.payment.dto.TransferStatusResponse;
 import au.com.bankforge.payment.entity.Transfer;
 import au.com.bankforge.payment.repository.TransferRepository;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -150,6 +151,13 @@ public class PaymentService {
                 transfer = transferStateService.advanceToPosting(transfer.getId());
                 incrementTransferInitiated(TransferState.POSTING);
                 transferAmountCounter.increment(request.amount().doubleValue());
+
+            } catch (CallNotPermittedException e) {
+                // Circuit breaker is OPEN — account-service is unhealthy, fail fast without reversal.
+                // transferExecuted is still false here so no reversal is needed.
+                log.warn("Transfer {} rejected — account-service circuit breaker OPEN", transfer.getId());
+                transfer = transferStateService.cancel(transfer.getId(), "Account service temporarily unavailable, please retry later");
+                incrementTransferInitiated(TransferState.CANCELLED);
 
             } catch (Exception e) {
                 log.error("Transfer {} failed: {}", transfer.getId(), e.getMessage());

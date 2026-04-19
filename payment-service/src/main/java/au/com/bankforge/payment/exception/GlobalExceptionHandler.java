@@ -1,6 +1,7 @@
 package au.com.bankforge.payment.exception;
 
 import au.com.bankforge.common.statemachine.InvalidStateTransitionException;
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,10 +23,21 @@ import java.util.Map;
  *   TransferFailedException             → 400 Bad Request
  *   InvalidStateTransitionException     → 500 Internal Server Error (programming error)
  *   MethodArgumentNotValidException     → 400 Bad Request (Jakarta validation failure)
+ *   CallNotPermittedException           → 503 Service Unavailable (circuit breaker open — safety net)
  */
 @RestControllerAdvice
 @Slf4j
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(CallNotPermittedException.class)
+    public ResponseEntity<Map<String, Object>> handleCircuitBreakerOpen(CallNotPermittedException ex) {
+        log.warn("Circuit breaker open — upstream service unavailable: {}", ex.getMessage());
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(Map.of(
+                        "error", "Account service temporarily unavailable, please retry later",
+                        "timestamp", Instant.now().toString()
+                ));
+    }
 
     @ExceptionHandler(DuplicateRequestException.class)
     public ResponseEntity<Map<String, Object>> handleDuplicate(DuplicateRequestException ex) {
