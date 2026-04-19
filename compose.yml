@@ -148,6 +148,9 @@ services:
       VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
       KEY_CONVERTER_SCHEMAS_ENABLE: "false"
       VALUE_CONVERTER_SCHEMAS_ENABLE: "false"
+    volumes:
+      - ./infra/debezium:/connectors:ro
+    entrypoint: ["/bin/sh", "/connectors/debezium-entrypoint.sh"]
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8083/connectors || exit 1"]
       interval: 10s
