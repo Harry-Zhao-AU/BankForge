@@ -6,17 +6,34 @@ metadata:
 data:
   debezium-entrypoint.sh: |
     #!/bin/sh
-    # Start Debezium Connect, then register all outbox connectors once the REST API is ready.
+    # Start Debezium Connect, then register all outbox connectors once:
+    #   1. The Kafka Connect REST API is ready
+    #   2. The banking services are UP (guarantees Flyway has created outbox tables)
+    # Without step 2, the connector task fails with "No table filters found" because
+    # publication.autocreate.mode=filtered requires the tables to already exist.
     set -e
+
+    wait_http() {
+      url=$1; label=$2; max=150; i=0
+      echo "Waiting for $label ($url)..."
+      until curl -sf --max-time 3 "$url" > /dev/null 2>&1; do
+        i=$((i + 1))
+        [ $i -ge $max ] && echo "Timeout waiting for $label" && exit 1
+        sleep 2
+      done
+      echo "$label is ready."
+    }
 
     /docker-entrypoint.sh start &
 
-    echo "Waiting for Kafka Connect REST API..."
-    until curl -sf http://localhost:8083/connectors > /dev/null 2>&1; do
-      sleep 2
-    done
-    echo "Kafka Connect is ready. Registering connectors..."
+    wait_http "http://localhost:8083/connectors" "Kafka Connect REST API"
 
+    # Wait for services whose outbox tables Debezium will monitor.
+    # Services UP = Flyway migrations complete = outbox tables exist.
+    wait_http "http://account-service:8080/actuator/health" "account-service"
+    wait_http "http://ledger-service:8080/actuator/health"  "ledger-service"
+
+    echo "Registering connectors..."
     for f in /connectors/*-connector.json; do
       name=$(grep -o '"name":"[^"]*"' "$f" | head -1 | cut -d'"' -f4)
       code=$(curl -s -o /dev/null -w "%{http_code}" \

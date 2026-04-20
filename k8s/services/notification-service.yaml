@@ -6,6 +6,7 @@ metadata:
 data:
   SPRING_KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
   OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4318"
+  LOG_AUSTRAC_PATH: "/tmp/austrac-audit.log"
 ---
 apiVersion: apps/v1
 kind: Deployment
