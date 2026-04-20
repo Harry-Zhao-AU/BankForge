@@ -110,8 +110,8 @@ k8s/
 |---|---|---|
 | 03-01 | kind cluster + Istio PERMISSIVE + Infrastructure | Cluster up, namespace labelled, Istio installed, all infra pods running |
 | 03-02 | Banking service manifests + Istio STRICT | All services 2/2 READY, mTLS STRICT enforced, port-forward.sh |
-| 03-03 | Keycloak + Kong JWT + rate limiting | JWT auth working, X-User-Id injected, 429 on rate limit |
-| 03-04 | Kiali + Observability K8s manifests + CD + Human verify | All MESH-01..07 success criteria confirmed |
+| 03-03 | Observability K8s manifests + Kiali + Istio STRICT | All services visible in Jaeger + Kiali, validate-observability-k8s.sh all green |
+| 03-04 | Keycloak + Kong JWT + rate limiting | JWT auth working, X-User-Id injected, 429 on rate limit |
 
 ---
 
