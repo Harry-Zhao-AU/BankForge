@@ -1,0 +1,192 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: debezium-entrypoint
+  namespace: bankforge
+data:
+  debezium-entrypoint.sh: |
+    #!/bin/sh
+    # Start Debezium Connect, then register all outbox connectors once the REST API is ready.
+    set -e
+
+    /docker-entrypoint.sh start &
+
+    echo "Waiting for Kafka Connect REST API..."
+    until curl -sf http://localhost:8083/connectors > /dev/null 2>&1; do
+      sleep 2
+    done
+    echo "Kafka Connect is ready. Registering connectors..."
+
+    for f in /connectors/*-connector.json; do
+      name=$(grep -o '"name":"[^"]*"' "$f" | head -1 | cut -d'"' -f4)
+      code=$(curl -s -o /dev/null -w "%{http_code}" \
+        -X POST -H "Content-Type: application/json" \
+        --data "@$f" http://localhost:8083/connectors)
+      case "$code" in
+        201) echo "[OK]   $name created" ;;
+        409) echo "[SKIP] $name already exists" ;;
+        *)   echo "[FAIL] $name — HTTP $code"; exit 1 ;;
+      esac
+    done
+
+    echo "All connectors registered."
+    wait
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: debezium-connectors
+  namespace: bankforge
+data:
+  account-outbox-connector.json: |
+    {
+      "name": "account-outbox-connector",
+      "config": {
+        "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+        "tasks.max": "1",
+        "database.hostname": "account-db",
+        "database.port": "5432",
+        "database.user": "account",
+        "database.password": "secret",
+        "database.dbname": "accountdb",
+        "topic.prefix": "bankforge",
+        "plugin.name": "pgoutput",
+        "publication.autocreate.mode": "filtered",
+        "publication.name": "bankforge_outbox_pub",
+        "slot.name": "bankforge_outbox_slot",
+        "slot.drop.on.stop": "true",
+        "table.include.list": "public.outbox_event",
+        "tombstones.on.delete": "false",
+        "transforms": "outbox",
+        "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
+        "transforms.outbox.route.by.field": "aggregatetype",
+        "transforms.outbox.table.field.event.key": "aggregateid",
+        "transforms.outbox.table.field.event.payload": "payload",
+        "transforms.outbox.table.expand.json.payload": "true",
+        "transforms.outbox.route.topic.replacement": "banking.${routedByValue}.events",
+        "transforms.outbox.table.fields.additional.placement": "aggregateid:header:transaction-id,traceparent:header:traceparent",
+        "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+        "key.converter.schemas.enable": "false",
+        "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+        "value.converter.schemas.enable": "false"
+      }
+    }
+  ledger-outbox-connector.json: |
+    {
+      "name": "bankforge-ledger-outbox-connector",
+      "config": {
+        "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+        "tasks.max": "1",
+        "database.hostname": "ledger-db",
+        "database.port": "5432",
+        "database.user": "ledger",
+        "database.password": "secret",
+        "database.dbname": "ledgerdb",
+        "topic.prefix": "bankforge-ledger",
+        "plugin.name": "pgoutput",
+        "publication.autocreate.mode": "filtered",
+        "publication.name": "bankforge_ledger_outbox_pub",
+        "slot.name": "bankforge_ledger_outbox_slot",
+        "slot.drop.on.stop": "true",
+        "table.include.list": "public.ledger_outbox_event",
+        "tombstones.on.delete": "false",
+        "transforms": "outbox",
+        "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
+        "transforms.outbox.route.by.field": "aggregatetype",
+        "transforms.outbox.table.field.event.key": "aggregateid",
+        "transforms.outbox.table.field.event.payload": "payload",
+        "transforms.outbox.table.expand.json.payload": "true",
+        "transforms.outbox.route.topic.replacement": "banking.transfer.confirmed",
+        "transforms.outbox.table.fields.additional.placement": "aggregateid:header:transaction-id,traceparent:header:traceparent",
+        "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+        "key.converter.schemas.enable": "false",
+        "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+        "value.converter.schemas.enable": "false"
+      }
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: debezium
+  namespace: bankforge
+spec:
+  selector:
+    app: debezium
+  ports:
+    - name: rest
+      port: 8083
+      targetPort: 8083
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: debezium
+  namespace: bankforge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: debezium
+  template:
+    metadata:
+      labels:
+        app: debezium
+    spec:
+      containers:
+        - name: debezium
+          image: quay.io/debezium/connect:3.1
+          command: [/bin/sh, /connectors/debezium-entrypoint.sh]
+          env:
+            - name: BOOTSTRAP_SERVERS
+              value: kafka:9092
+            - name: GROUP_ID
+              value: "1"
+            - name: CONFIG_STORAGE_TOPIC
+              value: debezium.configs
+            - name: OFFSET_STORAGE_TOPIC
+              value: debezium.offsets
+            - name: STATUS_STORAGE_TOPIC
+              value: debezium.status
+            - name: KEY_CONVERTER
+              value: org.apache.kafka.connect.json.JsonConverter
+            - name: VALUE_CONVERTER
+              value: org.apache.kafka.connect.json.JsonConverter
+            - name: KEY_CONVERTER_SCHEMAS_ENABLE
+              value: "false"
+            - name: VALUE_CONVERTER_SCHEMAS_ENABLE
+              value: "false"
+          ports:
+            - containerPort: 8083
+          readinessProbe:
+            httpGet:
+              path: /connectors
+              port: 8083
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            failureThreshold: 15
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1000m"
+              memory: "1Gi"
+          volumeMounts:
+            - name: entrypoint
+              mountPath: /connectors/debezium-entrypoint.sh
+              subPath: debezium-entrypoint.sh
+            - name: connectors
+              mountPath: /connectors/account-outbox-connector.json
+              subPath: account-outbox-connector.json
+            - name: connectors
+              mountPath: /connectors/ledger-outbox-connector.json
+              subPath: ledger-outbox-connector.json
+      volumes:
+        - name: entrypoint
+          configMap:
+            name: debezium-entrypoint
+            defaultMode: 0755
+        - name: connectors
+          configMap:
+            name: debezium-connectors
