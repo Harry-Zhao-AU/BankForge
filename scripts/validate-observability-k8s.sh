@@ -39,6 +39,10 @@ svc_exists() {
   kubectl get svc -n "$NAMESPACE" "$1" &>/dev/null
 }
 
+svc_exists_in() {
+  kubectl get svc -n "$1" "$2" &>/dev/null
+}
+
 # ── Escape hatch ─────────────────────────────────────────────────────────────
 if [[ "${SKIP_OBS_CHECK:-0}" == "1" ]]; then
   echo "Observability validation skipped (SKIP_OBS_CHECK=1)"
@@ -246,6 +250,34 @@ if svc_exists loki; then
   fi
 else
   log_skip "Loki not deployed (deploy in Plan 03-04)"
+fi
+
+# ── 11. Kiali service mesh graph ─────────────────────────────────────────────
+echo ""
+echo "--- Kiali service mesh ---"
+if svc_exists_in istio-system kiali; then
+  # Kiali is in istio-system — reach it cross-namespace via FQDN
+  KIALI_NS=$(kexec_curl "http://kiali.istio-system:20001/api/namespaces")
+  if echo "$KIALI_NS" | grep -q '"bankforge"'; then
+    log_pass "Kiali: bankforge namespace visible"
+  else
+    log_warn "Kiali: bankforge namespace not found in API response"
+  fi
+
+  # Check Kiali graph has nodes — correct v2.x path uses query param, not path segment
+  # Proves istio_requests_total is flowing from Prometheus into Kiali
+  KIALI_GRAPH=$(kexec_curl \
+    "http://kiali.istio-system:20001/api/namespaces/graph?namespaces=bankforge&graphType=workload&duration=300s")
+  NODE_COUNT=$(echo "$KIALI_GRAPH" | grep -oc '"id"' || true)
+  if [[ "$NODE_COUNT" -ge 4 ]]; then
+    log_pass "Kiali: graph has $NODE_COUNT nodes — Istio telemetry flowing"
+  elif [[ "$NODE_COUNT" -gt 0 ]]; then
+    log_warn "Kiali: graph has $NODE_COUNT nodes — send more traffic and retry"
+  else
+    log_warn "Kiali: empty graph — no Istio telemetry data yet (wait ~30s after transfer)"
+  fi
+else
+  log_skip "Kiali not deployed (deploy in Plan 03-03)"
 fi
 
 # ── Summary ───────────────────────────────────────────────────────────────────

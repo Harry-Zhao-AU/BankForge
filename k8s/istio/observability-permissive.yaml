@@ -1,0 +1,40 @@
+---
+# Kiali (in istio-system, no sidecar) queries Prometheus and Jaeger via plaintext.
+# STRICT mTLS on bankforge rejects those connections. These per-workload
+# PeerAuthentications drop to PERMISSIVE only for the observability pods so
+# Kiali can reach them while all banking-service-to-service traffic stays STRICT.
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: prometheus-permissive
+  namespace: bankforge
+spec:
+  selector:
+    matchLabels:
+      app: prometheus
+  mtls:
+    mode: PERMISSIVE
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: jaeger-permissive
+  namespace: bankforge
+spec:
+  selector:
+    matchLabels:
+      app: jaeger
+  mtls:
+    mode: PERMISSIVE
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: grafana-permissive
+  namespace: bankforge
+spec:
+  selector:
+    matchLabels:
+      app: grafana
+  mtls:
+    mode: PERMISSIVE
