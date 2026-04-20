@@ -17,9 +17,10 @@ rules:
       - nodes
       - pods
       - pods/log
+      - pods/portforward
       - replicationcontrollers
       - services
-    verbs: [get, list, watch]
+    verbs: [get, list, watch, create]
   - apiGroups: [apps]
     resources:
       - deployments
@@ -104,10 +105,9 @@ spec:
           ports:
             - containerPort: 20001
           readinessProbe:
-            httpGet:
-              path: /kiali/healthz
+            tcpSocket:
               port: 20001
-            initialDelaySeconds: 15
+            initialDelaySeconds: 10
             periodSeconds: 5
             failureThreshold: 6
           resources:
