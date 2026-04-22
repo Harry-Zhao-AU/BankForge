@@ -1,0 +1,79 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: account-service-ingress
+  namespace: bankforge
+  annotations:
+    konghq.com/plugins: otel-tracing,jwt-auth,inject-user-id
+spec:
+  ingressClassName: kong
+  rules:
+    - http:
+        paths:
+          - path: /api/accounts
+            pathType: Prefix
+            backend:
+              service:
+                name: account-service
+                port:
+                  number: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: payment-service-ingress
+  namespace: bankforge
+  annotations:
+    konghq.com/plugins: otel-tracing,jwt-auth,inject-user-id
+spec:
+  ingressClassName: kong
+  rules:
+    - http:
+        paths:
+          - path: /api/payments
+            pathType: Prefix
+            backend:
+              service:
+                name: payment-service
+                port:
+                  number: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ledger-service-ingress
+  namespace: bankforge
+  annotations:
+    konghq.com/plugins: otel-tracing,jwt-auth,inject-user-id
+spec:
+  ingressClassName: kong
+  rules:
+    - http:
+        paths:
+          - path: /api/ledger
+            pathType: Prefix
+            backend:
+              service:
+                name: ledger-service
+                port:
+                  number: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: notification-service-ingress
+  namespace: bankforge
+  annotations:
+    konghq.com/plugins: otel-tracing,jwt-auth,inject-user-id
+spec:
+  ingressClassName: kong
+  rules:
+    - http:
+        paths:
+          - path: /api/notifications
+            pathType: Prefix
+            backend:
+              service:
+                name: notification-service
+                port:
+                  number: 8080

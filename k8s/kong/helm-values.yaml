@@ -1,0 +1,14 @@
+controller:
+  ingressController:
+    enabled: true
+
+deployment:
+  pod:
+    annotations:
+      sidecar.istio.io/inject: "false"
+
+gateway:
+  env:
+    # Enable Kong internal tracing so the opentelemetry plugin generates spans
+    tracing_instrumentations: all
+    tracing_sampling_rate: "1.0"

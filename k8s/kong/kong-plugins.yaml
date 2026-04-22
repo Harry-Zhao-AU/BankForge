@@ -1,0 +1,55 @@
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: otel-tracing
+  namespace: bankforge
+plugin: opentelemetry
+config:
+  traces_endpoint: "http://otel-collector.bankforge.svc.cluster.local:4318/v1/traces"
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: jwt-auth
+  namespace: bankforge
+plugin: jwt
+config:
+  key_claim_name: iss
+  claims_to_verify:
+    - exp
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: inject-user-id
+  namespace: bankforge
+plugin: pre-function
+config:
+  access:
+    - |
+      -- Strip any forged X-User-Id header from the incoming request
+      kong.service.request.clear_header("X-User-Id")
+      -- Decode the JWT payload and inject X-User-Id from the sub claim
+      local auth = kong.request.get_header("Authorization")
+      if auth then
+        local token = auth:match("Bearer%s+(.*)")
+        if token then
+          local parts = {}
+          for part in token:gmatch("[^.]+") do
+            parts[#parts + 1] = part
+          end
+          if parts[2] then
+            local ok, payload = pcall(function()
+              local b64 = parts[2]:gsub("-", "+"):gsub("_", "/")
+              local padded = b64 .. string.rep("=", (4 - #b64 % 4) % 4)
+              return ngx.decode_base64(padded)
+            end)
+            if ok and payload then
+              local sub = payload:match('"sub":"([^"]+)"')
+              if sub then
+                kong.service.request.set_header("X-User-Id", sub)
+              end
+            end
+          end
+        end
+      end

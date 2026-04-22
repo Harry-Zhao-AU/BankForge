@@ -1,8 +1,12 @@
 apiVersion: security.istio.io/v1beta1
 kind: PeerAuthentication
 metadata:
-  name: bankforge-strict-mtls
+  name: bankforge-mtls
   namespace: bankforge
 spec:
   mtls:
-    mode: STRICT
+    # PERMISSIVE: Istio sidecars accept both mTLS and plaintext.
+    # Service-to-service calls within the mesh still use mTLS (both have sidecars).
+    # PERMISSIVE is required because Kong (no sidecar) sends plaintext to banking services.
+    # STRICT would reject Kong's plaintext even though JWT auth is enforced at Kong.
+    mode: PERMISSIVE
