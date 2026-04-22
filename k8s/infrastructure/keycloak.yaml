@@ -1,11 +1,19 @@
+# DEV ONLY — all secrets below are hardcoded for local kind cluster convenience.
+# Before deploying to any non-local environment:
+#   - admin-password        → inject via CI/CD or External Secrets Operator (never commit a real value)
+#   - client secret (kong)  → generate a strong random secret and store in Vault / AWS Secrets Manager
+#   - user passwords        → remove directAccessGrants or use a proper identity provider
 apiVersion: v1
 kind: Secret
 metadata:
   name: keycloak-secret
   namespace: bankforge
 stringData:
-  admin-password: "admin"
+  admin-password: "admin"  # REPLACE in production
 ---
+# SENSITIVE VALUES inside the realm JSON (cannot use YAML comments inside JSON):
+#   clients[kong].secret      = "kong-client-secret"  → REPLACE in production
+#   users[*].credentials.value = "password"           → REPLACE; disable directAccessGrants in production
 apiVersion: v1
 kind: ConfigMap
 metadata:
