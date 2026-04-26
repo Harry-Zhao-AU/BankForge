@@ -101,10 +101,10 @@
             <artifactId>opentelemetry-logback-appender-1.0</artifactId>
         </dependency>
 
-        <!-- JDBC tracing — wraps DataSource to create spans for every SQL query in Jaeger -->
+        <!-- JDBC tracing — core library only; Spring Boot 4 auto-config is wired manually in DataSourceTracingConfig -->
         <dependency>
             <groupId>net.ttddyy.observation</groupId>
-            <artifactId>datasource-micrometer-spring-boot</artifactId>
+            <artifactId>datasource-micrometer</artifactId>
             <version>1.0.6</version>
         </dependency>
 
