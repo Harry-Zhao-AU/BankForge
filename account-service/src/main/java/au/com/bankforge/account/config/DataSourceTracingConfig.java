@@ -7,6 +7,7 @@ import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 
 import javax.sql.DataSource;
 
@@ -14,7 +15,7 @@ import javax.sql.DataSource;
 class DataSourceTracingConfig {
 
     @Bean
-    static BeanPostProcessor dataSourceTracingPostProcessor(ObservationRegistry registry) {
+    static BeanPostProcessor dataSourceTracingPostProcessor(@Lazy ObservationRegistry registry) {
         return new BeanPostProcessor() {
             @Override
             public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
