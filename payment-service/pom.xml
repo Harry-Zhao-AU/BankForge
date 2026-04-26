@@ -101,6 +101,13 @@
             <artifactId>opentelemetry-logback-appender-1.0</artifactId>
         </dependency>
 
+        <!-- JDBC tracing — wraps DataSource to create spans for every SQL query in Jaeger -->
+        <dependency>
+            <groupId>net.ttddyy.observation</groupId>
+            <artifactId>datasource-micrometer-spring-boot</artifactId>
+            <version>1.0.6</version>
+        </dependency>
+
         <!-- Kafka consumer for transfer confirmation events -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
