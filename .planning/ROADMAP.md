@@ -9,11 +9,10 @@
 ## Phases
 
 - [x] **Phase 1: Service Scaffold + Core Banking** — Four Spring Boot services on Podman Compose with ACID money movement, BSB validation, transfer state machine (enum FSM), and Redis idempotency. Outbox table written but CDC not yet consumed. (completed 2026-04-10)
-- [ ] **Phase 1.1: CDC Pipeline + Compliance + Kind Spike** — Kafka KRaft + Debezium CDC consuming the outbox, DLT topics, AUSTRAC threshold audit logging, and a Podman + kind networking validation spike.
-- [ ] **Phase 2: Observability** — Full observability stack (OTel Collector, Jaeger, Prometheus, Loki, Grafana) added to Compose, proving distributed traces and metrics before Kubernetes migration.
-- [ ] **Phase 3: Service Mesh & Auth** — Full cut-over to a kind Kubernetes cluster with Istio mTLS STRICT, Kong API gateway, and Keycloak JWT issuance. Kiali live traffic graph operational.
-- [ ] **Phase 4: Graph & RCA Foundation** — Neo4j service graph populated via Prometheus/Istio ETL every 30 seconds, with Cypher queries that identify bottleneck services.
-- [ ] **Phase 5: AI Integration / MCP** — Python MCP server exposing banking operations and observability as tools to Claude Desktop, with autonomous end-to-end RCA demo.
+- [x] **Phase 1.1: CDC Pipeline + Compliance + Kind Spike** — Kafka KRaft + Debezium CDC consuming the outbox, DLT topics, AUSTRAC threshold audit logging, and a Podman + kind networking validation spike. (completed 2026-04-11)
+- [x] **Phase 2: Observability** — Full observability stack (OTel Collector, Jaeger, Prometheus, Loki, Grafana) added to Compose, proving distributed traces and metrics before Kubernetes migration. (completed 2026-04-13)
+- [x] **Phase 3: Service Mesh & Auth** — Full cut-over to a kind Kubernetes cluster with Istio mTLS STRICT, Kong API gateway, and Keycloak JWT issuance. Kiali live traffic graph operational. (completed 2026-05-14)
+- [ ] **Phase 4: AI Integration / MCP** — Python MCP server exposing banking operations and observability as tools to Claude Desktop, with autonomous end-to-end RCA demo.
 
 ---
 
@@ -124,48 +123,26 @@ Plans:
 
 ---
 
-### Phase 4: Graph & RCA Foundation
-
-**Goal**: Neo4j holds a live service relationship graph derived from Prometheus/Istio metrics, and Cypher queries can identify which service has the highest latency or error rate
-
-**Depends on**: Phase 3
-
-**Requirements**: GRAPH-01, GRAPH-02, GRAPH-03
-
-**Critical constraints:**
-- Neo4j ETL must only start after Istio metrics exist in Prometheus (minimum 1 minute of live traffic data)
-- ETL queries must use `rate(metric[5m])` windows — not instantaneous values — to avoid overwriting edge properties with unrepresentative spikes
-- Verify actual Prometheus Istio metric label names against the running system before writing any ETL code (`/api/v1/label/__name__/values`)
-
-**Success Criteria** (what must be TRUE):
-  1. After generating traffic (running a set of transfers), the Neo4j graph contains `Service` nodes for each banking service and `OBSERVED_CALL` edges carrying avg latency, p99 latency, error count, and call count — populated by the ETL, not by manual entry
-  2. The ETL's 30-second polling cycle is observable: each run issues a Prometheus query and executes a Cypher MERGE+SET, updating edge properties — confirmed by Neo4j edge timestamps advancing every 30 seconds
-  3. A Cypher query (`MATCH (a)-[r:OBSERVED_CALL]->(b) RETURN a, r, b ORDER BY r.avg_latency_ms DESC LIMIT 5`) returns ranked results identifying the slowest service pair — confirming graph-traversal RCA queries work against real data
-
-**Plans**: TBD
-
----
-
-### Phase 5: AI Integration / MCP
+### Phase 4: AI Integration / MCP
 
 **Goal**: Claude Desktop can query live banking state and observability data via MCP tools, and can autonomously diagnose a slow service using a composed RCA workflow
 
-**Depends on**: Phase 4
+**Depends on**: Phase 3
 
-**Requirements**: MCP-01, MCP-02, MCP-03, MCP-04, MCP-05, MCP-06, MCP-07, MCP-08
+**Requirements**: MCP-01, MCP-02, MCP-03, MCP-04, MCP-05, MCP-06, MCP-07
 
 **Critical constraints:**
-- All tool handlers must be `async def` with `httpx.AsyncClient` for HTTP and `AsyncGraphDatabase.driver()` for Neo4j — synchronous handlers block all tool calls
+- All tool handlers must be `async def` with `httpx.AsyncClient` for HTTP — synchronous handlers block all tool calls
 - Every tool must return a structured result: `{success: bool, data: ..., error: {code, message, retryable}}` — raw Python tracebacks prevent Claude from reasoning about failures
 - `claude_desktop_config.json` must use absolute Windows paths — relative paths cause Claude Desktop to report MCP server as disconnected
 - All write tools must default to `dry_run=True` — Claude must not be able to corrupt transfer state without an explicit override
 
 **Success Criteria** (what must be TRUE):
-  1. Claude Desktop connects to the MCP server (server appears as active in Claude Desktop settings) and `check_balance(account_id)` returns the current balance for a real account created in Phase 1
+  1. Claude Desktop connects to the MCP server (server appears as active in Claude Desktop settings) and `check_balance(account_id)` returns the current balance for a real account
   2. `track_transfer(transfer_id)` returns the current state machine status and the full event history for a transfer — Claude can describe what happened at each state transition
   3. `find_slow_services(threshold_ms=200)` returns a list of services currently exceeding the threshold, sourced from a live Prometheus query — not hardcoded or mocked
-  4. `query_service_graph("MATCH (a)-[r:OBSERVED_CALL]->(b) RETURN a.name, r.avg_latency_ms ORDER BY r.avg_latency_ms DESC LIMIT 3")` returns ranked results from the live Neo4j graph
-  5. Claude Desktop runs an end-to-end RCA scenario — given a slow service name, Claude calls `root_cause_analysis(service_name)`, which composes find_slow_services + get_jaeger_trace + query_service_graph, and Claude produces a written explanation of the root cause with supporting trace and graph evidence
+  4. `get_jaeger_trace(trace_id)` returns trace spans for a specific transfer — Claude can narrate the call path and identify where latency was incurred
+  5. Claude Desktop runs an end-to-end RCA scenario — given a slow service name, Claude calls `root_cause_analysis(service_name)`, which composes find_slow_services + get_jaeger_trace, and Claude produces a written explanation of the root cause with supporting trace and metrics evidence
 
 **Plans**: TBD
 
@@ -175,12 +152,11 @@ Plans:
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Service Scaffold + Core Banking | 4/4 | Complete   | 2026-04-10 |
-| 1.1. CDC Pipeline + Compliance | 0/? | Not started | - |
-| 2. Observability | 0/3 | Planned | - |
-| 3. Service Mesh & Auth | 0/? | Not started | - |
-| 4. Graph & RCA Foundation | 0/? | Not started | - |
-| 5. AI Integration / MCP | 0/? | Not started | - |
+| 1. Service Scaffold + Core Banking | 4/4 | Complete | 2026-04-10 |
+| 1.1. CDC Pipeline + Compliance | 3/3 | Complete | 2026-04-11 |
+| 2. Observability | 3/3 | Complete | 2026-04-13 |
+| 3. Service Mesh & Auth | 4/4 | Complete | 2026-05-14 |
+| 4. AI Integration / MCP | 0/? | Not started | - |
 
 ---
 
@@ -212,19 +188,15 @@ Plans:
 | MESH-05 | Phase 3 | Service Mesh & Auth |
 | MESH-06 | Phase 3 | Service Mesh & Auth |
 | MESH-07 | Phase 3 | Service Mesh & Auth |
-| GRAPH-01 | Phase 4 | Graph & RCA |
-| GRAPH-02 | Phase 4 | Graph & RCA |
-| GRAPH-03 | Phase 4 | Graph & RCA |
-| MCP-01 | Phase 5 | AI Integration / MCP |
-| MCP-02 | Phase 5 | AI Integration / MCP |
-| MCP-03 | Phase 5 | AI Integration / MCP |
-| MCP-04 | Phase 5 | AI Integration / MCP |
-| MCP-05 | Phase 5 | AI Integration / MCP |
-| MCP-06 | Phase 5 | AI Integration / MCP |
-| MCP-07 | Phase 5 | AI Integration / MCP |
-| MCP-08 | Phase 5 | AI Integration / MCP |
+| MCP-01 | Phase 4 | AI Integration / MCP |
+| MCP-02 | Phase 4 | AI Integration / MCP |
+| MCP-03 | Phase 4 | AI Integration / MCP |
+| MCP-04 | Phase 4 | AI Integration / MCP |
+| MCP-05 | Phase 4 | AI Integration / MCP |
+| MCP-06 | Phase 4 | AI Integration / MCP |
+| MCP-07 | Phase 4 | AI Integration / MCP |
 
-**Mapped: 34/34 v1 requirements — no orphans**
+**Mapped: 31/31 v1 requirements — no orphans**
 
 ---
 

@@ -10,45 +10,39 @@
 - [x] **CORE-01**: System exposes account-service REST API for creating accounts, checking balances, and listing transfer history
 - [x] **CORE-02**: System executes account-to-account transfers atomically via account-service (debit + credit + outbox write in one PostgreSQL transaction)
 - [x] **CORE-03**: System exposes payment-service REST API for initiating NPP-style payment flows
-- [ ] **CORE-04**: System records every transfer as a double-entry ledger pair via ledger-service (debit entry + credit entry)
-- [ ] **CORE-05**: System delivers async notifications (email/SMS/push simulation) via notification-service consuming Kafka events
+- [x] **CORE-04**: System records every transfer as a double-entry ledger pair via ledger-service (debit entry + credit entry)
+- [x] **CORE-05**: System delivers async notifications (email/SMS/push simulation) via notification-service consuming Kafka events
 
 ### Transaction Patterns (TXNS)
 
 - [x] **TXNS-01**: Transfer debit, credit, and outbox row are committed in a single local ACID PostgreSQL transaction — no partial states possible
-- [ ] **TXNS-02**: Outbox rows are captured by Debezium CDC and published to Kafka without dual-write (Debezium reads WAL, not the outbox directly)
-- [ ] **TXNS-03**: Downstream services (ledger, notification) consume Kafka events via Saga choreography — no central orchestrator
+- [x] **TXNS-02**: Outbox rows are captured by Debezium CDC and published to Kafka without dual-write (Debezium reads WAL, not the outbox directly)
+- [x] **TXNS-03**: Downstream services (ledger, notification) consume Kafka events via Saga choreography — no central orchestrator
 - [x] **TXNS-04**: Transfer lifecycle is tracked through state machine transitions: PENDING → PAYMENT_PROCESSING → PAYMENT_DONE → CONFIRMED (or COMPENSATING → CANCELLED)
 - [x] **TXNS-05**: Payment API accepts idempotency keys stored in Redis (TTL 24h) — duplicate requests return cached response without re-executing transfer
 
 ### Australian Banking (AUBN)
 
-- [ ] **AUBN-01**: account-service validates BSB format (6 digits, format NNN-NNN) and account number format (6–10 digits) on account creation and transfer
-- [ ] **AUBN-02**: Audit log records a flag for any transfer ≥ AUD $10,000 with timestamp, account IDs, amount, and transfer ID (AUSTRAC-style threshold event)
+- [x] **AUBN-01**: account-service validates BSB format (6 digits, format NNN-NNN) and account number format (6–10 digits) on account creation and transfer
+- [x] **AUBN-02**: Audit log records a flag for any transfer ≥ AUD $10,000 with timestamp, account IDs, amount, and transfer ID (AUSTRAC-style threshold event)
 
 ### Observability (OBS)
 
-- [ ] **OBS-01**: All services emit OpenTelemetry traces via Spring Boot 4 built-in OTel auto-configuration to an OTel Collector
-- [ ] **OBS-02**: Distributed traces (including cross-service HTTP calls) are queryable in Jaeger UI with full span detail
-- [ ] **OBS-03**: Prometheus scrapes metrics from all services and the Istio control plane via OTel Collector
-- [ ] **OBS-04**: Grafana dashboard displays traces, metrics, and logs in a unified view with banking-specific panels (transfer volume, latency p99, error rate)
-- [ ] **OBS-05**: Structured ECS-format logs from all services are collected by Promtail and queryable in Grafana Loki
+- [x] **OBS-01**: All services emit OpenTelemetry traces via Spring Boot 4 built-in OTel auto-configuration to an OTel Collector
+- [x] **OBS-02**: Distributed traces (including cross-service HTTP calls) are queryable in Jaeger UI with full span detail
+- [x] **OBS-03**: Prometheus scrapes metrics from all services and the Istio control plane via OTel Collector
+- [x] **OBS-04**: Grafana dashboard displays traces, metrics, and logs in a unified view with banking-specific panels (transfer volume, latency p99, error rate)
+- [x] **OBS-05**: Structured ECS-format logs from all services are collected by Promtail and queryable in Grafana Loki
 
 ### Service Mesh & Auth (MESH)
 
-- [ ] **MESH-01**: All services run as Kubernetes pods in a kind cluster with Istio sidecar injection enabled (2/2 READY)
-- [ ] **MESH-02**: Istio enforces mTLS in STRICT mode for all pod-to-pod communication — no plaintext internal traffic
-- [ ] **MESH-03**: Kong API gateway validates JWTs issued by Keycloak and injects trusted `X-User-Id` header — services read only this header, no auth code required
-- [ ] **MESH-04**: Kong strips any incoming `X-User-Id` header before injecting the verified one from JWT claims — prevents header forgery
+- [x] **MESH-01**: All services run as Kubernetes pods in a kind cluster with Istio sidecar injection enabled (2/2 READY)
+- [x] **MESH-02**: Istio enforces mTLS in STRICT mode for all pod-to-pod communication — no plaintext internal traffic
+- [x] **MESH-03**: Kong API gateway validates JWTs issued by Keycloak and injects trusted `X-User-Id` header — services read only this header, no auth code required
+- [x] **MESH-04**: Kong strips any incoming `X-User-Id` header before injecting the verified one from JWT claims — prevents header forgery
 - [ ] **MESH-05**: Kong enforces rate limiting at 100 requests/minute per client
-- [ ] **MESH-06**: Keycloak issues OAuth2/OIDC JWTs for the banking realm — human users authenticate via Keycloak, MCP server via API key
-- [ ] **MESH-07**: Kiali dashboard shows live Istio service graph with traffic rates and health indicators
-
-### Graph & RCA (GRAPH)
-
-- [ ] **GRAPH-01**: Neo4j stores a service graph where nodes are services and edges (OBSERVED_CALL) carry avg latency, p99 latency, error count, and call count
-- [ ] **GRAPH-02**: ETL service queries Prometheus Istio metrics every 30 seconds and upserts OBSERVED_CALL relationships via Cypher MERGE+SET
-- [ ] **GRAPH-03**: System supports Cypher queries that identify bottleneck services (highest avg latency, highest error rate) for root cause analysis
+- [x] **MESH-06**: Keycloak issues OAuth2/OIDC JWTs for the banking realm — human users authenticate via Keycloak, MCP server via API key
+- [x] **MESH-07**: Kiali dashboard shows live Istio service graph with traffic rates and health indicators
 
 ### AI Integration / MCP (MCP)
 
@@ -57,9 +51,8 @@
 - [ ] **MCP-03**: Python MCP server exposes `find_slow_services(threshold_ms)` querying Prometheus for services exceeding latency threshold
 - [ ] **MCP-04**: Python MCP server exposes `get_jaeger_trace(trace_id)` returning trace spans for a specific transfer
 - [ ] **MCP-05**: Python MCP server exposes `query_metrics(promql)` for ad-hoc Prometheus queries
-- [ ] **MCP-06**: Python MCP server exposes `query_service_graph(cypher)` for ad-hoc Neo4j Cypher queries
-- [ ] **MCP-07**: Python MCP server exposes `root_cause_analysis(service_name)` that composes find_slow_services + get_jaeger_trace + query_service_graph into an autonomous RCA workflow
-- [ ] **MCP-08**: Claude Desktop is configured to connect to the MCP server and can run an end-to-end RCA scenario: detect slow service → pull trace → query graph → explain root cause
+- [ ] **MCP-06**: Python MCP server exposes `root_cause_analysis(service_name)` that composes find_slow_services + get_jaeger_trace into an autonomous RCA workflow
+- [ ] **MCP-07**: Claude Desktop is configured to connect to the MCP server and can run an end-to-end RCA scenario: detect slow service → pull trace → explain root cause
 
 ## v2 Requirements
 

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: in_progress
-last_updated: "2026-04-15T00:00:00.000Z"
+last_updated: "2026-05-14T00:00:00.000Z"
 progress:
-  total_phases: 6
-  completed_phases: 2
-  total_plans: 10
-  completed_plans: 7
-  percent: 35
+  total_phases: 5
+  completed_phases: 4
+  total_plans: 14
+  completed_plans: 14
+  percent: 80
 ---
 
 # State: BankForge
@@ -22,25 +22,25 @@ progress:
 
 **Core Value:** A running, end-to-end system where every enterprise pattern (ACID, Saga, Outbox, mTLS, distributed tracing) is implemented and queryable via AI agent — proving the patterns work together, not just in theory.
 
-**Current Focus:** Phase 3 — Service Mesh & Auth (next up)
+**Current Focus:** Phase 4 — AI Integration / MCP
 
-**Total Phases:** 6
+**Total Phases:** 5
 
 ---
 
 ## Current Position
 
-Phase: 2 (observability) — COMPLETE
+Phase: 3 (service mesh & auth) — COMPLETE
 | Field | Value |
 |-------|-------|
-| Phase | 2 — Observability |
-| Plan | 02-01 COMPLETE; 02-02 COMPLETE; 02-03 COMPLETE |
-| Status | Phase 2 complete — ready for Phase 3 |
-| Phase progress | 100% (3/3 plans) |
+| Phase | 3 — Service Mesh & Auth |
+| Plan | 03-01 COMPLETE; 03-02 COMPLETE; 03-03 COMPLETE; 03-04 COMPLETE |
+| Status | Phase 3 complete — ready for Phase 4 (AI Integration / MCP) |
+| Phase progress | 100% (4/4 plans) |
 
 ```
-Progress: Phase 2 [██████████] 100%
-Overall:  [████░░░░░░] ~35% (phases 1, 1.1, 2 complete)
+Progress: Phase 3 [██████████] 100%
+Overall:  [████████░░] ~80% (phases 1, 1.1, 2, 3 complete)
 ```
 
 ---
@@ -52,9 +52,8 @@ Overall:  [████░░░░░░] ~35% (phases 1, 1.1, 2 complete)
 | 1 | Service Scaffold + Core Banking | COMPLETE | 4/4 | 2026-04-10 |
 | 1.1 | CDC Pipeline + Compliance + Kind Spike | COMPLETE | 3/3 | 2026-04-11 |
 | 2 | Observability | COMPLETE | 3/3 | 2026-04-13 |
-| 3 | Service Mesh & Auth | Not started | TBD | - |
-| 4 | Graph & RCA Foundation | Not started | TBD | - |
-| 5 | AI Integration / MCP | Not started | TBD | - |
+| 3 | Service Mesh & Auth | COMPLETE | 4/4 | 2026-05-14 |
+| 4 | AI Integration / MCP | Not started | TBD | - |
 
 ---
 
@@ -62,10 +61,10 @@ Overall:  [████░░░░░░] ~35% (phases 1, 1.1, 2 complete)
 
 | Metric | Value |
 |--------|-------|
-| Phases completed | 3/6 (1, 1.1, 2) |
-| Requirements delivered | 11/34 (CORE-01..05, TXNS-01..03, AUBN-01..02, OBS-01..05) |
-| Plans created | 10 |
-| Plans completed | 10 |
+| Phases completed | 4/5 (1, 1.1, 2, 3) |
+| Requirements delivered | 25/31 (CORE-01..05, TXNS-01..05, AUBN-01..02, OBS-01..05, MESH-01..07) |
+| Plans created | 14 |
+| Plans completed | 14 |
 
 | Plan | Duration | Tasks | Files |
 |------|----------|-------|-------|
@@ -161,20 +160,21 @@ None currently.
 
 ## Session Continuity
 
-**Last session:** 2026-04-17
+**Last session:** 2026-05-14
 
-**Resume point:** Phase 2 complete + OTel traceparent propagation through outbox implemented (quick task 260417-ohj). Full saga waterfall in Jaeger pending Debezium connector re-registration (see SUMMARY). Next: Phase 3 — Service Mesh & Auth. Run `/gsd-discuss-phase 3` or `/gsd-plan-phase 3`.
+**Resume point:** Phase 3 complete. All 4 banking services + observability stack + Keycloak + Kong running in kind cluster. JWT auth validated end-to-end (401 on no-auth, 200 on valid token, forged X-User-Id stripped by Kong Lua plugin). Phase 4 (Neo4j) removed — not needed. Next: Phase 4 — AI Integration / MCP. Run `/gsd-discuss-phase 4` or `/gsd-plan-phase 4`.
 
 **Context to carry forward:**
 
-- POSTING→CONFIRMED is now event-driven: HTTP response returns POSTING; ledger publishes banking.transfer.confirmed; TransferConfirmationListener confirms async. TransferStateService.complete() is gone — replaced by advanceToPosting() + confirm().
-- Phase 3 is highest-risk: Istio PERMISSIVE then STRICT, RS256 JWT, resource limits to prevent OOMKill
-- Phase 4 ETL depends on Istio metrics being in Prometheus first — do not start ETL until traffic is flowing
-- Debezium connector must be re-registered after every `podman compose up` — it is NOT auto-registered
-- @MockBean is GONE in Spring Boot 4 — always use @MockitoBean / @SpyBean
-- RestClient @Bean names must not match any @Component class name in scan path — name explicitly
-- CreateAccountRequest uses `initialBalance` (not `balance`) for opening balance
-- OTel property keys verified: tracing=management.opentelemetry.tracing.export.otlp.endpoint, logging=management.opentelemetry.logging.export.otlp.endpoint, metrics=management.otlp.metrics.export.url
+- kubectl from Windows Git Bash cannot reach cluster (kind API bound to WSL2 loopback 127.0.0.1:50063). Use `wsl -d podman-machine-default -- kubectl` or add netsh portproxy rule for Windows-side kubectl.
+- Kong client secret: `kong-client-secret` (not `kong-secret`). Client ID: `kong`. Direct access grants enabled on `kong` client.
+- `bankforge-app` client has `directAccessGrantsEnabled: false` — use `kong` client for password grant in scripts/tests.
+- Kong Lua pre-function plugin (inject-user-id) decodes JWT and injects X-User-Id from sub claim — no strip-path on ingress, full path forwarded to services.
+- POSTING→CONFIRMED is event-driven: HTTP response returns POSTING; ledger publishes banking.transfer.confirmed; TransferConfirmationListener confirms async.
+- Debezium connector must be re-registered after every `podman compose up` — NOT auto-registered.
+- @MockBean is GONE in Spring Boot 4 — always use @MockitoBean / @SpyBean.
+- CreateAccountRequest uses `accountName` field (not `accountHolder` or `name`).
+- OTel property keys: tracing=management.opentelemetry.tracing.export.otlp.endpoint, logging=management.opentelemetry.logging.export.otlp.endpoint, metrics=management.otlp.metrics.export.url
 
 ---
 

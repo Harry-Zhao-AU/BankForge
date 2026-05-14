@@ -390,25 +390,7 @@ publish_event(topic, event_type, payload)
 
 ---
 
-### Phase 4 — Neo4j Graph (Week 6)
-
-**Goal:** Service relationship graph with live metrics
-
-**Stack:**
-- Neo4j 5 Community
-- ETL service (Spring Boot scheduled job)
-- Neo4j Bloom
-
-**Deliverables:**
-- [ ] Neo4j running in K8s
-- [ ] ETL service querying Prometheus every 30s
-- [ ] OBSERVED_CALL relationships with metrics on edges
-- [ ] Neo4j Bloom showing service graph
-- [ ] Cypher queries for root cause analysis
-
----
-
-### Phase 5 — MCP + AI Agent (Week 7+)
+### Phase 4 — MCP + AI Agent (Week 6+)
 
 **Goal:** Claude can query and operate the banking system
 
@@ -420,8 +402,7 @@ publish_event(topic, event_type, payload)
 - [ ] MCP server with all tools implemented
 - [ ] Claude can check account balance
 - [ ] Claude can trace slow transfers
-- [ ] Claude can query Neo4j service graph
-- [ ] Claude can find root cause of latency issues
+- [ ] Claude can find root cause of latency issues via Prometheus + Jaeger
 - [ ] claude_desktop_config.json configured
 
 ---
@@ -447,8 +428,7 @@ This project demonstrates:
 ### Infrastructure
 - Kubernetes + Istio service mesh
 - Kong API gateway with auth
-- Full observability (traces + metrics + logs + graph)
-- Neo4j graph-powered root cause analysis
+- Full observability (traces + metrics + logs)
 
 ### Modern Java
 - Java 21 virtual threads
@@ -458,8 +438,7 @@ This project demonstrates:
 
 ### AI Integration
 - MCP server exposing banking operations
-- Claude agent doing autonomous RCA
-- Neo4j Cypher queries via MCP
+- Claude agent doing autonomous RCA via Prometheus + Jaeger
 
 ---
 
@@ -484,10 +463,9 @@ curl http://localhost:8003/actuator/health  # notification-service
 open http://localhost:16686   # Jaeger
 open http://localhost:9090    # Prometheus
 open http://localhost:3001    # Grafana
-open http://localhost:7474    # Neo4j Browser
 ```
 
 ---
 
 *Generated: April 2026*
-*Stack: Java 21 + Spring Boot 4.0.5 + Istio + Kong + Neo4j + Kafka*
+*Stack: Java 21 + Spring Boot 4.0.5 + Istio + Kong + Kafka*
